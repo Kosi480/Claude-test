@@ -224,6 +224,7 @@ def minigames_menu():
     print("    w) Dart War (2-4 Spieler)")
     print("    s) Dart Slots (1 Spieler)")
     print("    a) Dart Auction (2-4 Spieler)")
+    print("    m) Dart Maze (Labyrinth)")
     print("    0) Zurück")
 
     while True:
@@ -281,6 +282,11 @@ def minigames_menu():
             auction_menu()
             return
 
+        if choice == "m":
+            from maze import maze_menu
+            maze_menu()
+            return
+
         if choice in ("1", "2"):
             num = 0
             min_p = 2
@@ -306,4 +312,4 @@ def minigames_menu():
                 shanghai_game(names)
             return
 
-        print("  Bitte 0-9/w/s/a wählen.")
+        print("  Bitte 0-9/w/s/a/m wählen.")

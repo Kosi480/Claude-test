@@ -439,6 +439,8 @@ class DartGameGUI:
              self.show_gui_slots),
             ("Dart Auction", "Biete auf Segmente", COLORS["green"],
              self.show_gui_auction),
+            ("Dart Maze", "Labyrinth navigieren", COLORS["accent"],
+             self.show_gui_maze),
         ]
 
         for text, desc, color, cmd in games:
@@ -4790,6 +4792,180 @@ class DartGameGUI:
 
         def sim():
             r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_maze(self):
+        self.clear_frame()
+        self._make_header("DART MAZE")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board_canvas = DartBoardCanvas(left, size=300)
+        board_canvas.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+
+        import random as rnd
+        from maze import generate_maze, DIRECTIONS, DIR_SEGMENTS
+
+        state = {
+            "maze": None, "px": 0, "py": 0, "width": 5, "height": 5,
+            "exit_x": 4, "exit_y": 4, "moves": 0, "items": {},
+            "items_found": 0, "started": False, "fog": True,
+        }
+
+        maze_frame = tk.Frame(right, bg=COLORS["panel"])
+        maze_frame.pack(fill=tk.X, pady=5)
+        maze_canvas = tk.Canvas(maze_frame, bg="#1a1a2e", highlightthickness=0,
+                                width=300, height=300)
+        maze_canvas.pack(padx=10, pady=10)
+
+        def draw_maze():
+            maze_canvas.delete("all")
+            m = state["maze"]
+            if not m:
+                return
+            w, h = state["width"], state["height"]
+            px, py = state["px"], state["py"]
+            cell_size = min(280 // w, 280 // h)
+            ox = (300 - w * cell_size) // 2
+            oy = (300 - h * cell_size) // 2
+
+            for y in range(h):
+                for x in range(w):
+                    visible = not state["fog"] or abs(x - px) + abs(y - py) <= 2
+                    cx = ox + x * cell_size
+                    cy = oy + y * cell_size
+
+                    if not visible:
+                        maze_canvas.create_rectangle(cx, cy, cx + cell_size, cy + cell_size,
+                                                     fill="#2a2a3e", outline="#2a2a3e")
+                        continue
+
+                    maze_canvas.create_rectangle(cx, cy, cx + cell_size, cy + cell_size,
+                                                 fill="#1a1a2e", outline="#1a1a2e")
+
+                    wall_color = COLORS["text_dim"]
+                    if m[y][x]["N"]:
+                        maze_canvas.create_line(cx, cy, cx + cell_size, cy, fill=wall_color, width=2)
+                    if m[y][x]["S"]:
+                        maze_canvas.create_line(cx, cy + cell_size, cx + cell_size, cy + cell_size,
+                                                fill=wall_color, width=2)
+                    if m[y][x]["W"]:
+                        maze_canvas.create_line(cx, cy, cx, cy + cell_size, fill=wall_color, width=2)
+                    if m[y][x]["E"]:
+                        maze_canvas.create_line(cx + cell_size, cy, cx + cell_size, cy + cell_size,
+                                                fill=wall_color, width=2)
+
+                    mid_x = cx + cell_size // 2
+                    mid_y = cy + cell_size // 2
+                    if x == px and y == py:
+                        maze_canvas.create_oval(mid_x - 8, mid_y - 8, mid_x + 8, mid_y + 8,
+                                                fill=COLORS["accent"], outline="white")
+                    elif x == state["exit_x"] and y == state["exit_y"]:
+                        maze_canvas.create_text(mid_x, mid_y, text="X", fill=COLORS["green"],
+                                                font=("Courier", 14, "bold"))
+                    elif (x, y) in state["items"]:
+                        maze_canvas.create_text(mid_x, mid_y, text="?", fill=COLORS["yellow"],
+                                                font=("Courier", 12, "bold"))
+
+            maze_canvas.create_rectangle(ox, oy, ox + w * cell_size, oy + h * cell_size,
+                                         outline=COLORS["text_dim"], width=2)
+
+        def start_game(w, h):
+            state["width"] = w
+            state["height"] = h
+            state["exit_x"] = w - 1
+            state["exit_y"] = h - 1
+            state["maze"] = generate_maze(w, h)
+            state["px"] = 0
+            state["py"] = 0
+            state["moves"] = 0
+            state["items"] = {}
+            state["items_found"] = 0
+            state["fog"] = True
+            state["started"] = True
+            for _ in range(3):
+                ix, iy = rnd.randint(0, w - 1), rnd.randint(0, h - 1)
+                if (ix, iy) != (0, 0) and (ix, iy) != (w - 1, h - 1):
+                    state["items"][(ix, iy)] = rnd.choice(["Schluessel", "Trank", "Karte"])
+            log.clear()
+            log.add("Labyrinth gestartet!", "info")
+            log.add("1-5=N, 6-10=O, 11-15=S, 16-20=W", "info")
+            log.add("Bullseye = Karte aufdecken", "info")
+            setup_frame.pack_forget()
+            draw_maze()
+
+        setup_frame = tk.Frame(right, bg=COLORS["panel"])
+        setup_frame.pack(fill=tk.X, pady=5)
+        tk.Label(setup_frame, text="Groesse waehlen:", bg=COLORS["panel"],
+                 fg=COLORS["text"], font=("Courier", 11)).pack(pady=5)
+        for label, w_val, h_val in [("Klein 5x5", 5, 5), ("Mittel 7x7", 7, 7), ("Gross 9x9", 9, 9)]:
+            ttk.Button(setup_frame, text=label,
+                       command=lambda w=w_val, h=h_val: start_game(w, h)).pack(pady=2)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            from training import parse_hit_number
+            hit_num, hit_type = parse_hit_number(result)
+            state["moves"] += 1
+            m = state["maze"]
+            px, py = state["px"], state["py"]
+
+            if result == "Bullseye":
+                state["fog"] = False
+                log.add(f"Wurf: {result} - Karte aufgedeckt!", "success")
+                draw_maze()
+                return
+
+            cell = m[py][px]
+            available = [d for d in ["N", "E", "S", "W"] if not cell[d]]
+
+            moved = False
+            for d, seg_range in DIR_SEGMENTS.items():
+                if hit_num in seg_range and d in available:
+                    dx, dy = DIRECTIONS[d]
+                    state["px"] = px + dx
+                    state["py"] = py + dy
+                    log.add(f"Wurf: {result} ({points}) - {d}!", "hit")
+                    moved = True
+                    break
+
+            if not moved:
+                log.add(f"Wurf: {result} ({points}) - Wand!", "miss")
+
+            npx, npy = state["px"], state["py"]
+            if (npx, npy) in state["items"]:
+                item = state["items"].pop((npx, npy))
+                state["items_found"] += 1
+                log.add(f"Item gefunden: {item}!", "success")
+
+            draw_maze()
+
+            if npx == state["exit_x"] and npy == state["exit_y"]:
+                state["started"] = False
+                log.add(f"LABYRINTH GESCHAFFT! Zuege: {state['moves']}", "success")
+                wh = state["width"] + state["height"]
+                if state["moves"] <= wh:
+                    log.add("Bewertung: PERFEKT!", "success")
+                elif state["moves"] <= wh * 2:
+                    log.add("Bewertung: Sehr gut!", "success")
+                else:
+                    log.add("Bewertung: Geschafft!", "info")
+
+        board_canvas.on_hit = on_throw
+
+        def sim():
+            r, p = board_canvas.simulate_throw()
             on_throw(r, p)
 
         ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)

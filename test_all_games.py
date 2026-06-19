@@ -594,28 +594,22 @@ def test_combos():
 def test_math_darts():
     print("\n=== Test: Math Darts Answers ===")
 
-    operations = [
-        ("+", lambda a, b: a + b),
-        ("-", lambda a, b: a - b),
-        ("*", lambda a, b: a * b),
-    ]
+    from math_darts import generate_target
 
     errors = 0
-    for _ in range(100):
-        op_name, op_func = random.choice(operations)
-        a = random.randint(1, 20)
-        b = random.randint(1, 20)
-        answer = op_func(a, b)
+    for difficulty in ("easy", "medium", "hard"):
+        for _ in range(100):
+            target, equation = generate_target(difficulty)
 
-        # Check if answer could be negative
-        if answer < 0:
-            log_warning("Math Darts", f"{a} {op_name} {b} = {answer} (negativ!)")
+            if target < 1:
+                log_warning("Math Darts", f"{equation} -> {target} (< 1, nicht werfbar!)")
+                errors += 1
+            if target > 180:
+                log_warning("Math Darts", f"{equation} -> {target} (> 180, nicht werfbar mit 3 Darts!)")
+                errors += 1
 
-        # Check if answer is achievable with a dart throw
-        if answer > 60:
-            log_warning("Math Darts", f"{a} {op_name} {b} = {answer} (nicht werfbar, max 60)")
-
-    test_pass("Math Darts Berechnung geprueft")
+    assert errors == 0, f"{errors} ungueltige Math Darts Aufgaben"
+    test_pass("Math Darts Berechnung geprueft (300 Aufgaben, alle 1-180)")
 
 
 # ============================================================
