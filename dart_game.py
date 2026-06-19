@@ -508,7 +508,7 @@ def celebration_animation(result):
     sys.stdout.flush()
 
 
-def play_round(player, board):
+def play_round(player, board, recorder=None):
     print(f"\n{Color.BOLD}--- {player.name} ist dran (Runde {player.rounds + 1}) ---{Color.RESET}")
     print(f"    Verbleibend: {Color.info(f'{player.score} Punkte')}")
     if player.score <= 170 and not player.is_cpu:
@@ -535,18 +535,25 @@ def play_round(player, board):
             print(f"    -> {Color.warning('BUST!')} {Color.colorize_result(result, points)} - Runde ungültig!")
             player.stats.record_bust()
             player.stats.record_round(0)
+            if recorder:
+                recorder.record_bust(player.name, result, points, player.score)
             return
 
+        score_before = player.score - round_score
         round_score += points
         player.darts_thrown += 1
         remaining_after = player.score - round_score
         print(f"    -> {Color.colorize_result(result, points)} | Runden-Summe: {Color.BOLD}{round_score}{Color.RESET}")
+        if recorder:
+            recorder.record_throw(player.name, result, points, score_before, remaining_after)
         if remaining_after <= 170 and remaining_after > 0 and not player.is_cpu and dart < 3:
             show_checkout_hint(remaining_after)
 
     player.score -= round_score
     player.rounds += 1
     player.stats.record_round(round_score)
+    if recorder:
+        recorder.record_round_end(player.name, round_score, player.score)
     print(f"    Neuer Stand: {Color.info(f'{player.score} Punkte')}")
 
 
@@ -631,7 +638,7 @@ def choose_game_mode():
         print("  Bitte 1, 2 oder 3 wählen.")
 
 
-def play_leg(players, board, start_score, leg_label=""):
+def play_leg(players, board, start_score, leg_label="", recorder=None):
     for p in players:
         p.score = start_score
         p.darts_thrown = 0
@@ -644,11 +651,13 @@ def play_leg(players, board, start_score, leg_label=""):
     while True:
         display_scoreboard(players)
         for player in players:
-            play_round(player, board)
+            play_round(player, board, recorder=recorder)
             if player.score == 0:
                 print(f"\n{Color.BOLD}{Color.YELLOW}{'*' * 40}")
                 print(f"  {player.name} gewinnt das Leg mit {player.darts_thrown} Darts!")
                 print(f"{'*' * 40}{Color.RESET}")
+                if recorder:
+                    recorder.record_win(player.name, player.darts_thrown)
                 return player
 
 
@@ -741,20 +750,25 @@ def main():
     print("    1) Neues Spiel (501/301/701)")
     print("    2) Cricket-Modus")
     print("    3) Training")
-    print("    4) Highscores anzeigen")
-    print("    5) Spieler-Profil anzeigen")
+    print("    4) Replays ansehen")
+    print("    5) Highscores anzeigen")
+    print("    6) Spieler-Profil anzeigen")
     while True:
-        menu = input("  Wahl (1-5): ").strip()
-        if menu == "4":
+        menu = input("  Wahl (1-6): ").strip()
+        if menu == "5":
             Highscores.display()
             input("\n  [Enter] zum Fortfahren...")
             continue
-        if menu == "5":
+        if menu == "6":
             from profiles import ProfileManager
             pname = input("  Spielername: ").strip()
             if pname:
                 ProfileManager.display_profile(pname)
             input("\n  [Enter] zum Fortfahren...")
+            continue
+        if menu == "4":
+            from replay import replay_menu
+            replay_menu()
             continue
         if menu == "3":
             from training import training_menu
@@ -769,7 +783,7 @@ def main():
             return
         if menu == "1":
             break
-        print("  Bitte 1-5 wählen.")
+        print("  Bitte 1-6 wählen.")
 
     start_score = choose_game_mode()
     best_of = choose_tournament_mode()
@@ -778,12 +792,15 @@ def main():
     sets_to_win = (best_of // 2) + 1
 
     from profiles import ProfileManager
+    from replay import ReplayRecorder
 
+    game_mode = f"Best of {best_of}" if best_of > 1 else "Einzelspiel"
+    recorder = ReplayRecorder([p.name for p in players], game_mode, start_score)
     has_hard_cpu = any(isinstance(p, CPUPlayer) and p.difficulty == "schwer" for p in players)
 
     if best_of == 1:
         print(Color.success(f"\nSpiel startet! Modus: {start_score} - Ziel: Von {start_score} auf genau 0."))
-        winner = play_leg(players, board, start_score)
+        winner = play_leg(players, board, start_score, recorder=recorder)
         if not winner.is_cpu:
             Highscores.add_entry(
                 winner.name,
@@ -801,7 +818,7 @@ def main():
         while not tournament_over:
             set_num += 1
             leg_label = f"Set {set_num} / Best of {best_of}"
-            winner = play_leg(players, board, start_score, leg_label)
+            winner = play_leg(players, board, start_score, leg_label, recorder=recorder)
             set_wins[winner.name] += 1
             display_set_standings(set_wins, players, sets_to_win)
 
@@ -838,6 +855,9 @@ def main():
                 print(f"  {Color.BOLD}{Color.YELLOW}  LEVEL UP! Level {profile.level} - {profile.title}{Color.RESET}")
             for title, desc in unlocked:
                 print(f"  {Color.BOLD}{Color.GREEN}  ★ Achievement: {title}{Color.RESET} - {desc}")
+
+    replay_file = recorder.save()
+    print(Color.muted(f"\n  Replay gespeichert: {replay_file}"))
 
     print("\n" + Color.muted("=" * 40))
     print(Color.title(f"{'ENDSTATISTIKEN':^40}"))
