@@ -830,6 +830,7 @@ def main():
     print("    k) Bracket-Turnier (4/8 Spieler)")
     print("    x) Dart-Simulator (CPU vs CPU)")
     print("    l) Dart-Liga (Meisterschaft)")
+    print("    u) Dart Duel (1v1 Challenge)")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -887,6 +888,10 @@ def main():
         if menu == "l":
             from league import league_menu
             league_menu()
+            continue
+        if menu == "u":
+            from duel import duel_menu
+            duel_menu()
             continue
         if menu == "e":
             from settings import settings_menu
