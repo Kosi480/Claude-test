@@ -12,5 +12,6 @@ game_settings.json
 league_data.json
 handicap_data.json
 records_data.json
+world_tour_data.json
 exports/
 replays/

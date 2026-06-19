@@ -836,6 +836,7 @@ def main():
     print("    g) Records & Streaks")
     print("    y) Party-Modus (Elimination)")
     print("    z) Countdown (Zeitdruck)")
+    print("    j) World Tour (Weltreise)")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -917,6 +918,10 @@ def main():
         if menu == "z":
             from countdown import countdown_menu
             countdown_menu()
+            continue
+        if menu == "j":
+            from world_tour import world_tour_menu
+            world_tour_menu()
             continue
         if menu == "e":
             from settings import settings_menu
