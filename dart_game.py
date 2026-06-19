@@ -828,6 +828,7 @@ def main():
     print("    b) Dart-Kasino (Wetten)")
     print("    n) Saison-System")
     print("    k) Bracket-Turnier (4/8 Spieler)")
+    print("    x) Dart-Simulator (CPU vs CPU)")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
     while True:
@@ -877,6 +878,10 @@ def main():
             bracket_menu()
             print(Color.info("\nDanke fürs Spielen!"))
             return
+        if menu == "x":
+            from simulator import simulator_menu
+            simulator_menu()
+            continue
         if menu == "?":
             from tutorial import tutorial_menu
             tutorial_menu()
