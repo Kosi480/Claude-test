@@ -837,6 +837,7 @@ def main():
     print("    y) Party-Modus (Elimination)")
     print("    z) Countdown (Zeitdruck)")
     print("    j) World Tour (Weltreise)")
+    print("    a) Achievement Gallery")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -922,6 +923,10 @@ def main():
         if menu == "j":
             from world_tour import world_tour_menu
             world_tour_menu()
+            continue
+        if menu == "a":
+            from gallery import gallery_menu
+            gallery_menu()
             continue
         if menu == "e":
             from settings import settings_menu
