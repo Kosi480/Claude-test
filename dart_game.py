@@ -816,6 +816,7 @@ def main():
     print("    s) Statistik-Dashboard")
     print("    c) Custom Game (eigene Regeln)")
     print("    d) Sound-Demo")
+    print("    t) Dart-Trivia-Quiz")
     print("    0) Beenden")
     while True:
         menu = input("  Wahl (0-9/s): ").strip().lower()
@@ -834,6 +835,10 @@ def main():
         if menu == "d":
             from sounds import demo_sounds
             demo_sounds()
+            continue
+        if menu == "t":
+            from trivia import trivia_menu
+            trivia_menu()
             continue
         if menu == "8":
             Highscores.display()
