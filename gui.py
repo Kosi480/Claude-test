@@ -367,6 +367,8 @@ class DartGameGUI:
              self.show_gui_memory),
             ("Dart Blackjack", "Kartenspiel 21", COLORS["red"],
              self.show_gui_blackjack),
+            ("Dart War", "Territorien erobern", COLORS["accent"],
+             self.show_gui_war),
         ]
 
         for text, desc, color, cmd in games:
@@ -1649,6 +1651,161 @@ class DartGameGUI:
         ttk.Button(btn_frame, text="← Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
 
         deal_initial()
+
+    def show_gui_war(self):
+        self.clear_frame()
+        self._make_header("DART WAR")
+
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+
+        territories = [
+            {"name": "Nord", "segments": [1, 2, 3, 4, 5]},
+            {"name": "Ost", "segments": [6, 7, 8, 9, 10]},
+            {"name": "Sued", "segments": [11, 12, 13, 14, 15]},
+            {"name": "West", "segments": [16, 17, 18, 19, 20]},
+        ]
+
+        p1, p2 = "Rot", "Blau"
+        players = [p1, p2]
+        p_colors = {p1: COLORS["red"], p2: COLORS["accent2"]}
+        segment_owner = {}
+        scores = {p1: 0, p2: 0}
+        current = [p1]
+        darts_left = [3]
+        round_num = [1]
+        max_rounds = 8
+
+        map_frame = tk.Frame(right, bg=COLORS["card"])
+        map_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        tk.Label(map_frame, text="KRIEGSKARTE", bg=COLORS["card"],
+                 fg=COLORS["accent"], font=("Arial", 12, "bold")).pack(pady=5)
+
+        seg_labels = {}
+        for terr in territories:
+            tf = tk.Frame(map_frame, bg=COLORS["card"])
+            tf.pack(fill=tk.X, padx=10, pady=3)
+            tk.Label(tf, text=terr["name"], bg=COLORS["card"], fg=COLORS["yellow"],
+                     font=("Arial", 10, "bold"), width=6).pack(side=tk.LEFT)
+            for seg in terr["segments"]:
+                lbl = tk.Label(tf, text=str(seg), bg=COLORS["dark"], fg=COLORS["muted"],
+                               font=("Arial", 9), width=4, relief=tk.RAISED)
+                lbl.pack(side=tk.LEFT, padx=2)
+                seg_labels[seg] = lbl
+
+        score_frame = tk.Frame(right, bg=COLORS["card"])
+        score_frame.pack(fill=tk.X, pady=5, padx=5)
+        score_labels = {}
+        for name in players:
+            f = tk.Frame(score_frame, bg=COLORS["card"])
+            f.pack(fill=tk.X, padx=10, pady=2)
+            tk.Label(f, text=name, bg=COLORS["card"], fg=p_colors[name],
+                     font=("Arial", 11, "bold")).pack(side=tk.LEFT)
+            lbl = tk.Label(f, text="0", bg=COLORS["card"], fg=COLORS["yellow"],
+                           font=("Arial", 13, "bold"))
+            lbl.pack(side=tk.RIGHT)
+            score_labels[name] = lbl
+
+        info_label = tk.Label(right, text=f"Runde 1/{max_rounds} | {current[0]} | Darts: 3",
+                              bg=COLORS["bg"], fg=COLORS["yellow"],
+                              font=("Arial", 12, "bold"))
+        info_label.pack(pady=5)
+
+        game_log = GameLog(right)
+        game_log.pack(fill=tk.BOTH, expand=True)
+        game_log.log("DART WAR", "header")
+        game_log.log(f"Erobere Segmente! Double/Triple zum Stehlen\n")
+
+        def update_seg(seg, owner):
+            seg_labels[seg].config(bg=p_colors[owner], fg=COLORS["white"])
+
+        def on_throw(result, points):
+            if round_num[0] > max_rounds:
+                return
+
+            player = current[0]
+            other = p2 if player == p1 else p1
+
+            parts = result.split()
+            hit_num = 0
+            hit_type = "single"
+            if result in ("Bullseye", "Bull", "Miss"):
+                if result == "Bullseye":
+                    scores[player] += 25
+                    game_log.log(f"  {result} - +25 Bonus!", "hit")
+                elif result == "Bull":
+                    scores[player] += 10
+                    game_log.log(f"  {result} - +10 Bonus!", "hit")
+                else:
+                    game_log.log(f"  {result} - daneben", "miss")
+            elif len(parts) == 2:
+                try:
+                    hit_num = int(parts[1])
+                except ValueError:
+                    hit_num = 0
+                if parts[0] == "Double":
+                    hit_type = "double"
+                elif parts[0] == "Triple":
+                    hit_type = "triple"
+
+                if hit_num > 0:
+                    if hit_num not in segment_owner:
+                        segment_owner[hit_num] = player
+                        update_seg(hit_num, player)
+                        earned = hit_num * (2 if hit_type == "double" else 3 if hit_type == "triple" else 1)
+                        scores[player] += earned
+                        game_log.log(f"  {result} - Segment {hit_num} erobert! +{earned}", "hit")
+                    elif segment_owner[hit_num] == player:
+                        scores[player] += 5
+                        game_log.log(f"  {result} - eigenes Gebiet (+5)", "miss")
+                    else:
+                        if hit_type in ("double", "triple"):
+                            segment_owner[hit_num] = player
+                            update_seg(hit_num, player)
+                            earned = hit_num * (2 if hit_type == "double" else 3)
+                            scores[player] += earned
+                            game_log.log(f"  {result} - GESTOHLEN von {other}! +{earned}", "hit")
+                        else:
+                            game_log.log(f"  {result} - {other}s Gebiet (Double noetig)", "miss")
+
+            score_labels[player].config(text=str(scores[player]))
+
+            darts_left[0] -= 1
+            if darts_left[0] <= 0:
+                current[0] = other
+                darts_left[0] = 3
+                if player == players[-1]:
+                    round_num[0] += 1
+                if round_num[0] > max_rounds:
+                    winner = max(scores, key=scores.get)
+                    game_log.log(f"\n{winner} GEWINNT DART WAR!", "header")
+                    board_widget.canvas.unbind("<Button-1>")
+                else:
+                    game_log.log(f"\n{current[0]} ist dran", "info")
+
+            info_label.config(
+                text=f"Runde {min(round_num[0], max_rounds)}/{max_rounds} | {current[0]} | Darts: {darts_left[0]}"
+            )
+
+        board_widget = DartBoardCanvas(left, size=420, on_throw=on_throw)
+        board_widget.pack(pady=5)
+
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+
+        def sim():
+            r, p = board_widget.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="🎯 Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="← Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
 
     def _placeholder(self, name):
         messagebox.showinfo("Kommt bald",
