@@ -202,10 +202,11 @@ def training_menu():
     print("    6) Kombo-Challenge (Streak-Bonus)")
     print("    7) Endurance (Überlebensmodus)")
     print("    8) Survival (Wellen-Modus)")
-    print("    9) Zurück")
+    print("    9) Reaktionstest (Reflex)")
+    print("    0) Zurück")
 
     while True:
-        choice = input("  Wahl (1-9): ").strip()
+        choice = input("  Wahl (0-9): ").strip()
         if choice == "1":
             around_the_clock()
             return
@@ -236,5 +237,9 @@ def training_menu():
             survival_menu()
             return
         elif choice == "9":
+            from reaction import reaction_menu
+            reaction_menu()
             return
-        print("  Bitte 1-9 wählen.")
+        elif choice == "0":
+            return
+        print("  Bitte 0-9 wählen.")
