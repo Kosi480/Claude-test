@@ -796,20 +796,25 @@ def main():
     print("    4) Training")
     print("    5) Tägliche Challenge")
     print("    6) Replays ansehen")
-    print("    7) Highscores anzeigen")
-    print("    8) Spieler-Profil anzeigen")
+    print("    7) Leaderboard (Elo-Rangliste)")
+    print("    8) Highscores anzeigen")
+    print("    9) Spieler-Profil anzeigen")
     while True:
-        menu = input("  Wahl (1-8): ").strip()
-        if menu == "7":
+        menu = input("  Wahl (1-9): ").strip()
+        if menu == "8":
             Highscores.display()
             input("\n  [Enter] zum Fortfahren...")
             continue
-        if menu == "8":
+        if menu == "9":
             from profiles import ProfileManager
             pname = input("  Spielername: ").strip()
             if pname:
                 ProfileManager.display_profile(pname)
             input("\n  [Enter] zum Fortfahren...")
+            continue
+        if menu == "7":
+            from leaderboard import leaderboard_menu
+            leaderboard_menu()
             continue
         if menu == "6":
             from replay import replay_menu
@@ -838,7 +843,7 @@ def main():
             return
         if menu == "1":
             break
-        print("  Bitte 1-8 wählen.")
+        print("  Bitte 1-9 wählen.")
 
     start_score = choose_game_mode()
     best_of = choose_tournament_mode()
@@ -910,6 +915,16 @@ def main():
                 print(f"  {Color.BOLD}{Color.YELLOW}  LEVEL UP! Level {profile.level} - {profile.title}{Color.RESET}")
             for title, desc in unlocked:
                 print(f"  {Color.BOLD}{Color.GREEN}  ★ Achievement: {title}{Color.RESET} - {desc}")
+
+    from leaderboard import Leaderboard
+    human_players = [p for p in players if not p.is_cpu]
+    if len(human_players) >= 2:
+        for p in human_players:
+            if p.name != winner.name:
+                w_change, l_change = Leaderboard.record_match(winner.name, p.name)
+                print(f"\n  {Color.info('Elo-Update:')}")
+                print(f"    {winner.name}: {Color.success(f'+{w_change}')}")
+                print(f"    {p.name}: {Color.warning(str(l_change))}")
 
     replay_file = recorder.save()
     print(Color.muted(f"\n  Replay gespeichert: {replay_file}"))

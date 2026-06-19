@@ -3,4 +3,5 @@ __pycache__/
 highscores.json
 profiles.json
 daily_progress.json
+leaderboard.json
 replays/
