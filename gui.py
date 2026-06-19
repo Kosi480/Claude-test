@@ -216,6 +216,7 @@ class GameLog:
         self.text.tag_configure("success", foreground=COLORS["green"],
                                 font=("Consolas", 10, "bold"))
         self.text.tag_configure("bold", font=("Consolas", 10, "bold"))
+        self.text.tag_configure("warning", foreground="#ff8800")
         self.text.tag_configure("header", foreground=COLORS["accent"],
                                 font=("Consolas", 11, "bold"))
 
@@ -679,7 +680,7 @@ class DartGameGUI:
 
             if new_score < 0 or new_score == 1:
                 game_log.log(f"  BUST! ({result} = {points})", "miss")
-                scores[player] = old_score - round_score[0]
+                scores[player] = old_score + round_score[0]
                 score_panel.update_score(player, scores[player])
                 round_score[0] = 0
                 darts_left[0] = 0
@@ -693,7 +694,7 @@ class DartGameGUI:
                     return
                 else:
                     game_log.log(f"  BUST! Kein Double-Finish", "miss")
-                    scores[player] = old_score - round_score[0]
+                    scores[player] = old_score + round_score[0]
                     score_panel.update_score(player, scores[player])
                     round_score[0] = 0
                     darts_left[0] = 0
@@ -1083,6 +1084,9 @@ class DartGameGUI:
                 except ValueError:
                     seg = 0
 
+            if state[0] == "waiting":
+                return
+
             if seg not in mem_board:
                 game_log.log(f"  {result} - kein Kartensegment", "miss")
                 return
@@ -1130,16 +1134,18 @@ class DartGameGUI:
                     f = first_pick[0]
                     s = seg
 
+                    state[0] = "waiting"
+
                     def hide_both():
                         hide_card(f)
                         hide_card(s)
                         mem_board[f]["revealed"] = False
                         mem_board[s]["revealed"] = False
+                        state[0] = "picking_first"
 
                     self.root.after(1000, hide_both)
 
                 first_pick[0] = None
-                state[0] = "picking_first"
                 info_label.config(text=f"Paare: {pairs_found[0]}/6 | Erste Karte!")
 
         board_widget = DartBoardCanvas(left, size=420, on_throw=on_throw)
@@ -1439,7 +1445,7 @@ class DartGameGUI:
                     pins[p]["standing"] = False
                     knocked += 1
 
-            if result == "Bullseye":
+            if result in ("Bullseye", "Bull"):
                 standing = [p for p in range(1, 11) if pins[p]["standing"]]
                 if standing:
                     target = random.choice(standing)
@@ -1854,8 +1860,12 @@ class DartGameGUI:
                 if player == players[-1]:
                     round_num[0] += 1
                 if round_num[0] > max_rounds:
-                    winner = max(scores, key=scores.get)
-                    game_log.log(f"\n{winner} GEWINNT DART WAR!", "header")
+                    s1, s2 = scores[players[0]], scores[players[1]]
+                    if s1 == s2:
+                        game_log.log(f"\nUNENTSCHIEDEN! {s1}-{s2}", "header")
+                    else:
+                        winner = max(scores, key=scores.get)
+                        game_log.log(f"\n{winner} GEWINNT DART WAR!", "header")
                     board_widget.canvas.unbind("<Button-1>")
                 else:
                     game_log.log(f"\n{current[0]} ist dran", "info")
@@ -2270,6 +2280,7 @@ class DartGameGUI:
                     round_num[0] = 5
                     return
                 board_widget.canvas.unbind("<Button-1>")
+                return
 
             game_log.log(f"{current[0]} waehlt ein Ziel...", "info")
 
@@ -3921,7 +3932,7 @@ class DartGameGUI:
             state["dart"] += 1
             if state["dart"] >= 3:
                 round_total = state["round_score"]
-                if state["score"] < state["threshold"] * state["round"]:
+                if round_total < state["threshold"]:
                     damage = max(5, state["threshold"] - round_total)
                     state["hp"] -= damage
                     log.add(f"  Runde schwach! -{damage} HP", "warning")
@@ -4252,12 +4263,16 @@ class DartGameGUI:
                             log.add(f"  {target_name} ELIMINIERT!", "miss")
                             assign_targets()
                 elif hit_type == "triple" and hit_num == tp["segment"]:
-                    tp["lives"] -= 2
-                    log.add(f"  Triple-Kill! {target_name} -2 Leben ({max(0,tp['lives'])})", "success")
-                    if tp["lives"] <= 0:
-                        tp["alive"] = False
-                        log.add(f"  {target_name} ELIMINIERT!", "miss")
-                        assign_targets()
+                    if tp["shield"]:
+                        tp["shield"] = False
+                        log.add(f"  {target_name}s Schild blockt Triple!", "warning")
+                    else:
+                        tp["lives"] -= 2
+                        log.add(f"  Triple-Kill! {target_name} -2 Leben ({max(0,tp['lives'])})", "success")
+                        if tp["lives"] <= 0:
+                            tp["alive"] = False
+                            log.add(f"  {target_name} ELIMINIERT!", "miss")
+                            assign_targets()
                 elif hit_num == state["players"][cur]["segment"]:
                     state["players"][cur]["shield"] = True
                     log.add(f"  {cur} aktiviert Schild!", "info")
