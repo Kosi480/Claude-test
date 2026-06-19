@@ -838,6 +838,7 @@ def main():
     print("    z) Countdown (Zeitdruck)")
     print("    j) World Tour (Weltreise)")
     print("    a) Achievement Gallery")
+    print("    f) Penalty Shootout (1v1)")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -927,6 +928,10 @@ def main():
         if menu == "a":
             from gallery import gallery_menu
             gallery_menu()
+            continue
+        if menu == "f":
+            from penalty import penalty_menu
+            penalty_menu()
             continue
         if menu == "e":
             from settings import settings_menu
