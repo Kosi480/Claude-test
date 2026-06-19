@@ -203,10 +203,11 @@ def training_menu():
     print("    7) Endurance (Überlebensmodus)")
     print("    8) Survival (Wellen-Modus)")
     print("    9) Reaktionstest (Reflex)")
+    print("    p) Dart Puzzle (Zahlenrätsel)")
     print("    0) Zurück")
 
     while True:
-        choice = input("  Wahl (0-9): ").strip()
+        choice = input("  Wahl (0-9/p): ").strip().lower()
         if choice == "1":
             around_the_clock()
             return
@@ -240,6 +241,10 @@ def training_menu():
             from reaction import reaction_menu
             reaction_menu()
             return
+        elif choice == "p":
+            from puzzle import puzzle_menu
+            puzzle_menu()
+            return
         elif choice == "0":
             return
-        print("  Bitte 0-9 wählen.")
+        print("  Bitte 0-9/p wählen.")
