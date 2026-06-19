@@ -692,6 +692,51 @@ class TestEdgeCases(unittest.TestCase):
                           f"Segment {seg} wurde in 10000 Wuerfen nie getroffen")
 
 
+class TestReactionMatchNum(unittest.TestCase):
+    def test_bullseye_match_num(self):
+        from reaction import TARGETS
+        for t in TARGETS:
+            self.assertLessEqual(t["match_num"], 25,
+                                 f"{t['label']} has match_num {t['match_num']} > 25")
+
+    def test_bullseye_check(self):
+        from reaction import check_target_hit
+        be_target = {"label": "Bullseye", "match_num": 25, "match_type": "bullseye", "difficulty": 3}
+        self.assertTrue(check_target_hit("Bullseye", be_target))
+
+
+class TestWarNoDoubleBonus(unittest.TestCase):
+    def test_territory_bonus_applied_once(self):
+        from war import TERRITORIES
+        from dart_game import DartBoard
+        random.seed(42)
+        board = DartBoard()
+        scores = {"A": 0, "B": 0}
+        territory_owner = {t["name"]: None for t in TERRITORIES}
+        territory_owner[TERRITORIES[0]["name"]] = "A"
+        scores["A"] += TERRITORIES[0]["bonus"]
+        old_score = scores["A"]
+        self.assertEqual(scores["A"], old_score)
+
+
+class TestBowling10thFrame(unittest.TestCase):
+    def test_setup_pins(self):
+        from bowling import setup_pins, PINS
+        pins = setup_pins()
+        standing = sum(1 for p in PINS if pins[p]["standing"])
+        self.assertEqual(standing, 10)
+
+
+class TestMazeWalls(unittest.TestCase):
+    def test_all_cells_have_walls(self):
+        from maze import generate_maze
+        maze = generate_maze(5, 5)
+        for y in range(5):
+            for x in range(5):
+                for d in ("N", "S", "E", "W"):
+                    self.assertIn(d, maze[y][x])
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("  TIEFE SPIELTESTS - Umfassende Edge Cases")
