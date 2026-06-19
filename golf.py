@@ -68,7 +68,7 @@ def play_hole(board, hole, player_name):
                   f"{Color.muted(f'({remaining} übrig)')}")
 
     if not hit:
-        darts = MAX_DARTS_PER_HOLE + 1
+        darts = MAX_DARTS_PER_HOLE
 
     diff = darts - hole["par"]
     score_name, score_color = SCORE_NAMES.get(diff, (f"+{diff}", Color.RED))

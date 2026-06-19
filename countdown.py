@@ -159,7 +159,7 @@ def run_countdown(mode_key):
     print(f"  Beste Runde:  {best_round}")
 
     if darts_thrown > 0:
-        avg = (mode["score"] - score) / (darts_thrown / 3) if darts_thrown >= 3 else 0
+        avg = (mode["score"] - score) / rounds if rounds > 0 else 0
         print(f"  Ø pro Runde:  {avg:.1f}")
 
     if won:

@@ -11,7 +11,8 @@ def dart_to_card_value(result, points):
     if result == "Bull":
         return 10, "10"
     if points == 0 or result == "Miss":
-        return random.choice([2, 3]), f"Niete ({random.choice([2, 3])})"
+        val = random.choice([2, 3])
+        return val, f"Niete ({val})"
 
     parts = result.split()
     if len(parts) == 2:

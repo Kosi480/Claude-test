@@ -117,7 +117,6 @@ def run_roulette(player_names, num_rounds=8):
             opponent_display = f"{scores[player]} (Gegner: {other_scores})" if other else str(scores[player])
 
             points, effect = play_roulette_round(board, player, opponent_display, r, num_rounds)
-            scores[player] += points
 
             if effect == "swap" and len(player_names) >= 2:
                 swap_target = random.choice([p for p in player_names if p != player])
@@ -125,6 +124,9 @@ def run_roulette(player_names, num_rounds=8):
                 old_other = scores[swap_target]
                 scores[player] = old_other
                 scores[swap_target] = old_self
+                scores[player] += points
+            else:
+                scores[player] += points
                 print(f"\n    {Color.RED}PUNKTE-TAUSCH!{Color.RESET}")
                 print(f"    {player}: {old_self} → {scores[player]}")
                 print(f"    {swap_target}: {old_other} → {scores[swap_target]}")

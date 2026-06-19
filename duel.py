@@ -78,8 +78,6 @@ def score_highest_single(throws):
     for t in throws:
         if t["type"] == "single":
             best = max(best, t["number"])
-        elif t["type"] in ("double", "triple"):
-            best = max(best, t["number"])
         elif t["type"] in ("bull", "bullseye"):
             best = max(best, 25)
     return best

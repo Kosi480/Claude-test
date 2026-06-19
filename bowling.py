@@ -197,7 +197,7 @@ def play_frame(board, pins, frame_num, is_tenth=False):
     if is_tenth:
         for ball in range(1, 4):
             if ball == 1 or frame.get("strike1") or frame.get("strike2") or frame.get("spare"):
-                if ball > 1 and (frame.get("strike1") or (ball == 3 and frame.get("spare"))):
+                if ball > 1 and ((ball == 2 and frame.get("strike1")) or frame.get("strike2") or (ball == 3 and frame.get("spare"))):
                     pins = setup_pins()
 
                 display_pins(pins, frame_num, ball)

@@ -28,8 +28,8 @@ BINGO_TARGETS = [
     ("50+", "50+ Punkte", lambda r, p: p >= 50),
     ("Trpl", "Irgendein Triple", lambda r, p: r.startswith("Triple")),
     ("Dbl", "Irgendein Double", lambda r, p: r.startswith("Double")),
-    ("Ung", "Ungerade Zahl", lambda r, p: p > 0 and p % 2 == 1),
-    ("Ger", "Gerade Zahl", lambda r, p: p > 0 and p % 2 == 0 and not r.startswith("Double") and r != "Bullseye"),
+    ("Ung", "Ungerade Segment", lambda r, p: p > 0 and any(r.endswith(str(n)) for n in (1, 3, 5, 7, 9, 11, 13, 15, 17, 19))),
+    ("Ger", "Gerade Segment", lambda r, p: p > 0 and any(r.endswith(str(n)) for n in (2, 4, 6, 8, 10, 12, 14, 16, 18, 20))),
     ("Prim", "Primzahl-Score", lambda r, p: p in (2, 3, 5, 7, 11, 13, 17, 19, 23, 25, 29, 31, 37, 41, 43, 47)),
 ]
 

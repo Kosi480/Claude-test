@@ -92,7 +92,7 @@ def run_penalty_shootout(p1_name, p2_name):
         remaining = 5 - r
         if p2_goals + remaining + 1 < p1_goals and r >= 3:
             print(f"\n  {Color.muted(f'{p2_name} kann nicht mehr aufholen.')}")
-            for _ in range(remaining):
+            for _ in range(remaining + 1):
                 p2_results.append(False)
             break
 
