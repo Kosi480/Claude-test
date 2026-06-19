@@ -2,6 +2,7 @@
 """Ein interaktives Dart-Spiel für die Kommandozeile."""
 
 import json
+import math
 import os
 import random
 import sys
@@ -34,6 +35,81 @@ class DartBoard:
             return (f"{segment}", segment)
         else:
             return ("Miss", 0)
+
+
+class AsciiDartBoard:
+    RADIUS = 9
+    SEGMENTS = DartBoard.SEGMENTS
+
+    def render(self, hit_result):
+        size = self.RADIUS * 2 + 1
+        cx, cy = self.RADIUS, self.RADIUS
+        grid = [[' ' for _ in range(size * 2)] for _ in range(size)]
+
+        for y in range(size):
+            for x_idx in range(size * 2):
+                x = x_idx / 2.0
+                dx = x - cx
+                dy = y - cy
+                dist = math.sqrt(dx * dx + dy * dy)
+
+                if dist <= 1:
+                    grid[y][x_idx] = '#'
+                elif dist <= 2:
+                    grid[y][x_idx] = '@'
+                elif dist <= 5:
+                    grid[y][x_idx] = '.'
+                elif dist <= 6:
+                    grid[y][x_idx] = ':'
+                elif dist <= 8:
+                    grid[y][x_idx] = '.'
+                elif dist <= 9:
+                    grid[y][x_idx] = ':'
+                elif abs(dist - 9.5) < 0.7:
+                    grid[y][x_idx] = '-'
+
+        hx, hy = self._hit_position(hit_result, cx, cy)
+        if 0 <= hy < size and 0 <= hx < size * 2:
+            grid[hy][hx] = 'X'
+
+        lines = []
+        lines.append(f"    {'':^{size * 2}}")
+        for row in grid:
+            lines.append("    " + "".join(row))
+        return "\n".join(lines)
+
+    def _hit_position(self, result, cx, cy):
+        if result == "Bullseye":
+            return cx * 2, cy
+        elif result == "Bull":
+            angle = random.uniform(0, 2 * math.pi)
+            return int(cx * 2 + 1.5 * math.cos(angle)), int(cy + 1.5 * math.sin(angle))
+        elif result == "Miss":
+            angle = random.uniform(0, 2 * math.pi)
+            return int(cx * 2 + 10 * math.cos(angle)), int(cy + 10 * math.sin(angle))
+
+        if result.startswith("Triple"):
+            dist = 5.5
+        elif result.startswith("Double"):
+            dist = 8.5
+        else:
+            dist = random.choice([3.5, 7.0])
+
+        segment_str = result.split()[-1]
+        try:
+            segment_num = int(segment_str)
+        except ValueError:
+            return cx * 2, cy
+
+        if segment_num in self.SEGMENTS:
+            idx = self.SEGMENTS.index(segment_num)
+        else:
+            idx = 0
+        angle = (idx * 18 - 90) * math.pi / 180
+
+        hx = int(cx * 2 + dist * math.cos(angle) * 1.0)
+        hy = int(cy + dist * math.sin(angle))
+        return hx, hy
 
 
 class Statistics:
@@ -336,6 +412,9 @@ def display_scoreboard(players):
     print("=" * 40)
 
 
+ascii_board = AsciiDartBoard()
+
+
 def play_round(player, board):
     print(f"\n--- {player.name} ist dran (Runde {player.rounds + 1}) ---")
     print(f"    Verbleibend: {player.score} Punkte")
@@ -354,6 +433,8 @@ def play_round(player, board):
             result, points = board.throw()
 
         player.stats.record_throw(result, points)
+        if not player.is_cpu:
+            print(ascii_board.render(result))
 
         if player.score - round_score - points < 0:
             print(f"    -> {result} ({points} Punkte) - BUST! Runde ungültig!")
