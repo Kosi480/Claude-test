@@ -813,12 +813,17 @@ def main():
     print("    7) Leaderboard (Elo-Rangliste)")
     print("    8) Highscores anzeigen")
     print("    9) Spieler-Profil anzeigen")
+    print("    s) Statistik-Dashboard")
     print("    0) Beenden")
     while True:
-        menu = input("  Wahl (0-9): ").strip()
+        menu = input("  Wahl (0-9/s): ").strip().lower()
         if menu == "0":
             print(Color.info("\nDanke fürs Spielen! Bis zum nächsten Mal!"))
             return
+        if menu == "s":
+            from stats_dashboard import stats_menu
+            stats_menu()
+            continue
         if menu == "8":
             Highscores.display()
             input("\n  [Enter] zum Fortfahren...")
