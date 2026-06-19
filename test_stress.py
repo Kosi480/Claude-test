@@ -761,6 +761,53 @@ def stress_target_practice(seed):
             assert isinstance(near, bool)
 
 
+def stress_poker_game(seed):
+    random.seed(seed)
+    from poker import evaluate_hand, parse_throw
+    from dart_game import DartBoard
+    board = DartBoard()
+    for _ in range(10):
+        throws = []
+        for _ in range(5):
+            r, p = board.throw()
+            throws.append(parse_throw(r, p))
+        rank, name, score = evaluate_hand(throws)
+        assert rank >= 1, f"Rank too low: {rank}"
+        assert rank <= 10, f"Rank too high: {rank}"
+        assert isinstance(name, str)
+        assert score >= 0, f"Negative score: {score}"
+
+
+def stress_json_safety(seed):
+    random.seed(seed)
+    import tempfile, os, json
+    from profiles import ProfileManager
+    from match_history import MatchHistory
+    from leaderboard import Leaderboard
+    tmp = tempfile.mktemp(suffix=".json")
+    with open(tmp, "w") as f:
+        f.write("{broken json")
+    import profiles, match_history, leaderboard
+    old_pf = profiles.PROFILES_FILE
+    old_hf = match_history.HISTORY_FILE
+    old_lf = leaderboard.LEADERBOARD_FILE
+    profiles.PROFILES_FILE = tmp
+    match_history.HISTORY_FILE = tmp
+    leaderboard.LEADERBOARD_FILE = tmp
+    try:
+        p = ProfileManager.load_all()
+        assert isinstance(p, dict)
+        h = MatchHistory.load()
+        assert isinstance(h, list)
+        lb = Leaderboard.load()
+        assert isinstance(lb, dict)
+    finally:
+        profiles.PROFILES_FILE = old_pf
+        match_history.HISTORY_FILE = old_hf
+        leaderboard.LEADERBOARD_FILE = old_lf
+        os.unlink(tmp)
+
+
 def main():
     print("=" * 60)
     print("  STRESS-TESTS: 100 Iterationen pro Spielmodus")
@@ -803,6 +850,8 @@ def main():
         ("AuctionSets", stress_auction_sets, 100),
         ("CricketLogic", stress_cricket_logic, 50),
         ("TargetPractice", stress_target_practice, 50),
+        ("PokerGame", stress_poker_game, 50),
+        ("JSONSafety", stress_json_safety, 10),
     ]
 
     for name, fn, iters in tests:

@@ -14,8 +14,11 @@ class MatchHistory:
     @staticmethod
     def load():
         if os.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE, "r") as f:
-                return json.load(f)
+            try:
+                with open(HISTORY_FILE, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                return []
         return []
 
     @staticmethod

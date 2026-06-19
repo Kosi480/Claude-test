@@ -25,8 +25,11 @@ class HeatmapTracker:
     @staticmethod
     def load():
         if os.path.exists(HEATMAP_FILE):
-            with open(HEATMAP_FILE, "r") as f:
-                return json.load(f)
+            try:
+                with open(HEATMAP_FILE, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                return {}
         return {}
 
     @staticmethod

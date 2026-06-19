@@ -80,8 +80,11 @@ class ReplayRecorder:
 
 class ReplayPlayer:
     def __init__(self, filepath):
-        with open(filepath, "r") as f:
-            self.data = json.load(f)
+        try:
+            with open(filepath, "r") as f:
+                self.data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            self.data = {"players": [], "throws": [], "mode": "unknown", "scores": {}}
 
     def play(self, speed=1.0):
         d = self.data

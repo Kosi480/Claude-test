@@ -158,7 +158,7 @@ class PlayerProfile:
 
     @classmethod
     def from_dict(cls, data):
-        p = cls(data["name"])
+        p = cls(data.get("name", "Unknown"))
         p.xp = data.get("xp", 0)
         p.level = data.get("level", 1)
         p.total_games = data.get("total_games", 0)
@@ -177,9 +177,12 @@ class ProfileManager:
     @staticmethod
     def load_all():
         if os.path.exists(PROFILES_FILE):
-            with open(PROFILES_FILE, "r") as f:
-                data = json.load(f)
-            return {name: PlayerProfile.from_dict(d) for name, d in data.items()}
+            try:
+                with open(PROFILES_FILE, "r") as f:
+                    data = json.load(f)
+                return {name: PlayerProfile.from_dict(d) for name, d in data.items()}
+            except (json.JSONDecodeError, IOError, KeyError):
+                return {}
         return {}
 
     @staticmethod

@@ -56,8 +56,11 @@ class SeasonManager:
     @staticmethod
     def load():
         if os.path.exists(SEASONS_FILE):
-            with open(SEASONS_FILE, "r") as f:
-                return json.load(f)
+            try:
+                with open(SEASONS_FILE, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
         return {"current_season": 0, "players": {}, "hall_of_fame": []}
 
     @staticmethod

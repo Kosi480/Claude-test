@@ -52,7 +52,7 @@ def evaluate_hand(throws):
     types = [t["type"] for t in throws if t["type"] != "miss"]
 
     if not numbers:
-        return 0, "Höchste Karte", 0
+        return 1, "Höchste Karte", 0
 
     num_counts = Counter(numbers)
     type_counts = Counter(types)
@@ -181,8 +181,8 @@ def run_poker(player_names, num_rounds=5):
             if rank > best_hands[player][0]:
                 best_hands[player] = (rank, hand_name)
 
-        best_rank = max(r[0] for r in round_results.values())
-        best_score = max(r[2] for r in round_results.values() if r[0] == best_rank)
+        best_rank = max(rr[0] for rr in round_results.values())
+        best_score = max(rr[2] for rr in round_results.values() if rr[0] == best_rank)
         round_winners = [
             p for p, (rank, _, score) in round_results.items()
             if rank == best_rank and score == best_score

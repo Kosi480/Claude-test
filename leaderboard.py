@@ -41,8 +41,11 @@ class Leaderboard:
     @staticmethod
     def load():
         if os.path.exists(LEADERBOARD_FILE):
-            with open(LEADERBOARD_FILE, "r") as f:
-                return json.load(f)
+            try:
+                with open(LEADERBOARD_FILE, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                return {}
         return {}
 
     @staticmethod
