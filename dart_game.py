@@ -589,6 +589,57 @@ def choose_game_mode():
         print("  Bitte 1, 2 oder 3 wählen.")
 
 
+def play_leg(players, board, start_score, leg_label=""):
+    for p in players:
+        p.score = start_score
+        p.darts_thrown = 0
+        p.rounds = 0
+        p.stats = Statistics()
+
+    if leg_label:
+        print(f"\n{Color.BOLD}{Color.MAGENTA}  === {leg_label} ==={Color.RESET}")
+
+    while True:
+        display_scoreboard(players)
+        for player in players:
+            play_round(player, board)
+            if player.score == 0:
+                print(f"\n{Color.BOLD}{Color.YELLOW}{'*' * 40}")
+                print(f"  {player.name} gewinnt das Leg mit {player.darts_thrown} Darts!")
+                print(f"{'*' * 40}{Color.RESET}")
+                return player
+
+
+def display_set_standings(set_wins, players, sets_to_win):
+    print(f"\n{Color.muted('─' * 40)}")
+    print(Color.title(f"{'SET-STAND':^40}"))
+    print(Color.muted("─" * 40))
+    for p in players:
+        wins = set_wins.get(p.name, 0)
+        bar = "█" * wins + "░" * (sets_to_win - wins)
+        print(f"  {p.name:<20} {bar} {wins}/{sets_to_win}")
+    print(Color.muted("─" * 40))
+
+
+def choose_tournament_mode():
+    print(f"\n  {Color.title('Turnier-Modus:')}")
+    print("    1) Einzelspiel (1 Leg)")
+    print("    2) Best of 3 Sets")
+    print("    3) Best of 5 Sets")
+    print("    4) Best of 7 Sets (WM-Finale)")
+    while True:
+        choice = input("  Wahl (1-4): ").strip()
+        if choice == "1":
+            return 1
+        elif choice == "2":
+            return 3
+        elif choice == "3":
+            return 5
+        elif choice == "4":
+            return 7
+        print("  Bitte 1, 2, 3 oder 4 wählen.")
+
+
 def main():
     print(Color.muted("=" * 40))
     print(Color.title(f"{'DART SPIEL':^40}"))
@@ -609,6 +660,7 @@ def main():
         print("  Bitte 1 oder 2 wählen.")
 
     start_score = choose_game_mode()
+    best_of = choose_tournament_mode()
 
     print("\n  Gegner-Modus:")
     print("    1) Nur Menschen")
@@ -657,27 +709,47 @@ def main():
             players.append(cpu)
 
     board = DartBoard()
+    sets_to_win = (best_of // 2) + 1
 
-    print(Color.success(f"\nSpiel startet! Modus: {start_score} - Ziel: Von {start_score} auf genau 0."))
+    if best_of == 1:
+        print(Color.success(f"\nSpiel startet! Modus: {start_score} - Ziel: Von {start_score} auf genau 0."))
+        winner = play_leg(players, board, start_score)
+        if not winner.is_cpu:
+            Highscores.add_entry(
+                winner.name,
+                winner.darts_thrown,
+                winner.stats.average_per_round,
+            )
+            print(Color.success("  Ergebnis in Highscores gespeichert!"))
+    else:
+        set_wins = {p.name: 0 for p in players}
+        print(Color.success(f"\nTurnier startet! Best of {best_of} | Modus: {start_score}"))
+        print(Color.info(f"  Erster Spieler mit {sets_to_win} Sets gewinnt!"))
 
-    game_over = False
-    while not game_over:
-        display_scoreboard(players)
-        for player in players:
-            play_round(player, board)
-            if player.score == 0:
-                print(f"\n{Color.BOLD}{Color.YELLOW}{'*' * 40}")
-                print(f"  {player.name} GEWINNT mit {player.darts_thrown} Darts!")
-                print(f"{'*' * 40}{Color.RESET}")
-                if not player.is_cpu:
+        set_num = 0
+        tournament_over = False
+        while not tournament_over:
+            set_num += 1
+            leg_label = f"Set {set_num} / Best of {best_of}"
+            winner = play_leg(players, board, start_score, leg_label)
+            set_wins[winner.name] += 1
+            display_set_standings(set_wins, players, sets_to_win)
+
+            if set_wins[winner.name] >= sets_to_win:
+                print(f"\n{Color.BOLD}{Color.YELLOW}{'*' * 44}")
+                print(f"  {winner.name} GEWINNT DAS TURNIER!")
+                print(f"  Sets: {set_wins[winner.name]}-{max(v for k, v in set_wins.items() if k != winner.name)}")
+                print(f"{'*' * 44}{Color.RESET}")
+                if not winner.is_cpu:
                     Highscores.add_entry(
-                        player.name,
-                        player.darts_thrown,
-                        player.stats.average_per_round,
+                        winner.name,
+                        winner.darts_thrown,
+                        winner.stats.average_per_round,
                     )
                     print(Color.success("  Ergebnis in Highscores gespeichert!"))
-                game_over = True
-                break
+                tournament_over = True
+            else:
+                input(Color.info("\n  [Enter] für nächstes Set..."))
 
     print("\n" + Color.muted("=" * 40))
     print(Color.title(f"{'ENDSTATISTIKEN':^40}"))
