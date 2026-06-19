@@ -68,7 +68,7 @@ def generate_difference():
     seq = [diffs[0]]
     for i in range(1, len(diffs)):
         seq.append(seq[-1] + diffs[i])
-    answer = seq[-1] + diffs[-1] + 1
+    answer = seq[-1]
     if answer > 20:
         return generate_arithmetic()
     return seq[:-1], answer, "Wachsende Differenzen"

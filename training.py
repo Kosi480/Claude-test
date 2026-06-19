@@ -23,6 +23,8 @@ def parse_hit_number(result):
             return num, "triple"
         elif parts[0] == "Double":
             return num, "double"
+        elif parts[0] == "Single":
+            return num, "single"
     elif len(parts) == 1:
         try:
             return int(parts[0]), "single"

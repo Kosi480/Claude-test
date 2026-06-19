@@ -534,6 +534,45 @@ def stress_countdown(seed):
         assert avg >= 0
 
 
+def stress_puzzle(seed):
+    random.seed(seed)
+    from puzzle import generate_puzzle, generate_difference
+    for _ in range(20):
+        seq, answer, hint = generate_puzzle()
+        assert 1 <= answer <= 20, f"Answer out of range: {answer} ({hint})"
+        assert isinstance(answer, int), f"Non-int answer: {answer}"
+    for _ in range(10):
+        seq, answer, hint = generate_difference()
+        if hint == "Wachsende Differenzen":
+            all_vals = seq + [answer]
+            diffs = [all_vals[j + 1] - all_vals[j] for j in range(len(all_vals) - 1)]
+            diff_of_diffs = [diffs[j + 1] - diffs[j] for j in range(len(diffs) - 1)]
+            assert len(set(diff_of_diffs)) <= 1, f"Inconsistent diffs: {seq} -> {answer}"
+
+
+def stress_parse_hit(seed):
+    random.seed(seed)
+    from dart_game import DartBoard
+    from training import parse_hit_number
+    board = DartBoard()
+    for _ in range(100):
+        result, points = board.throw()
+        hit_num, hit_type = parse_hit_number(result)
+        assert hit_num >= 0, f"Neg hit_num: {result}"
+        assert hit_type in ("single", "double", "triple", "bullseye", "bull", "miss"), \
+            f"Bad hit_type: {hit_type} for {result}"
+        if hit_type == "single":
+            assert 1 <= hit_num <= 20, f"Single out of range: {hit_num}"
+        elif hit_type == "double":
+            assert 1 <= hit_num <= 20, f"Double out of range: {hit_num}"
+        elif hit_type == "triple":
+            assert 1 <= hit_num <= 20, f"Triple out of range: {hit_num}"
+    for fmt in ["Single 20", "Double 10", "Triple 19", "5", "Bullseye", "Bull", "Miss"]:
+        num, typ = parse_hit_number(fmt)
+        assert num >= 0
+        assert typ != "miss" or fmt == "Miss", f"Failed to parse: {fmt} -> {num},{typ}"
+
+
 def main():
     print("=" * 60)
     print("  STRESS-TESTS: 100 Iterationen pro Spielmodus")
@@ -562,6 +601,8 @@ def main():
         ("Roulette", stress_roulette, 100),
         ("Duel", stress_duel, 100),
         ("Countdown", stress_countdown, 100),
+        ("Puzzle", stress_puzzle, 100),
+        ("ParseHit", stress_parse_hit, 100),
     ]
 
     for name, fn, iters in tests:

@@ -7,6 +7,7 @@ import math
 import random
 import threading
 import time
+from training import parse_hit_number
 
 SEGMENTS = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5]
 
@@ -29,6 +30,9 @@ COLORS = {
     "board_cream": "#f5e6c8",
     "bull_green": "#22aa22",
     "bull_red": "#cc2222",
+    "panel": "#16213e",
+    "text": "#e0e0e0",
+    "text_dim": "#666680",
 }
 
 
@@ -209,6 +213,8 @@ class GameLog:
         self.text.tag_configure("hit", foreground=COLORS["green"])
         self.text.tag_configure("miss", foreground=COLORS["red"])
         self.text.tag_configure("info", foreground=COLORS["yellow"])
+        self.text.tag_configure("success", foreground=COLORS["green"],
+                                font=("Consolas", 10, "bold"))
         self.text.tag_configure("bold", font=("Consolas", 10, "bold"))
         self.text.tag_configure("header", foreground=COLORS["accent"],
                                 font=("Consolas", 11, "bold"))
@@ -221,6 +227,9 @@ class GameLog:
             self.text.insert(tk.END, text + "\n")
         self.text.see(tk.END)
         self.text.config(state=tk.DISABLED)
+
+    def add(self, text, tag=None):
+        self.log(text, tag)
 
     def clear(self):
         self.text.config(state=tk.NORMAL)
@@ -3305,7 +3314,7 @@ class DartGameGUI:
                     state["current_idx"] = state["current_idx"] % len(alive2)
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -3421,7 +3430,7 @@ class DartGameGUI:
                         log.add(f"Runde {state['round']}: Glueckszahl = {state['lucky']}", "info")
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -3557,7 +3566,7 @@ class DartGameGUI:
                         state["started"] = False
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -3669,7 +3678,7 @@ class DartGameGUI:
                 log.add(f"BINGO! {bc} Linie(n) komplett in {state['darts']} Darts!", "success")
             update_card()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -3751,7 +3760,7 @@ class DartGameGUI:
                 status_lbl.config(text=f"  FERTIG!\n  Treffer: {state['hits']}/{state['max_darts']}\n"
                                        f"  Punkte: {state['score']}\n  Zeit: {elapsed:.1f}s")
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -3838,7 +3847,7 @@ class DartGameGUI:
                     log.add(f"FERTIG! {state['score']} Punkte, Beste Streak: {state['best_streak']}", "success")
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -3919,7 +3928,7 @@ class DartGameGUI:
                     log.add(f"GAME OVER! {state['round']-1} Runden, {state['score']} Punkte", "miss")
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -4028,7 +4037,7 @@ class DartGameGUI:
                     new_wave()
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -4111,7 +4120,7 @@ class DartGameGUI:
             else:
                 log.add(f"R{state['round']}: {result} - Daneben! (Ziel: {state['target']})", "miss")
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -4251,7 +4260,7 @@ class DartGameGUI:
                     state["current_idx"] = (state["current_idx"] + 1) % len(alive2)
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -4320,7 +4329,7 @@ class DartGameGUI:
                 state["round"] += 1
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -4389,7 +4398,7 @@ class DartGameGUI:
             state["q_idx"] += 1
             show_question()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -4475,7 +4484,7 @@ class DartGameGUI:
                 show_city()
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -4576,7 +4585,7 @@ class DartGameGUI:
                 log.add(f"{state['p1']} GEWINNT DAS DUELL!", "success")
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -4670,7 +4679,7 @@ class DartGameGUI:
                     log.add(f"Game Over! Max Credits: {state['max_credits']}", "warning")
             update_reels()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             if not state["spinning"]:
@@ -4788,7 +4797,7 @@ class DartGameGUI:
                         log.add(f"  {n}: {state['scores'][n]} Punkte", "info")
             update_display()
 
-        board.on_hit = on_throw
+        board.on_throw = on_throw
 
         def sim():
             r, p = board.simulate_throw()
@@ -4915,7 +4924,6 @@ class DartGameGUI:
         def on_throw(result, points):
             if not state["started"]:
                 return
-            from training import parse_hit_number
             hit_num, hit_type = parse_hit_number(result)
             state["moves"] += 1
             m = state["maze"]
@@ -4962,7 +4970,7 @@ class DartGameGUI:
                 else:
                     log.add("Bewertung: Geschafft!", "info")
 
-        board_canvas.on_hit = on_throw
+        board_canvas.on_throw = on_throw
 
         def sim():
             r, p = board_canvas.simulate_throw()
