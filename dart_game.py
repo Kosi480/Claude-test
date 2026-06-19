@@ -832,6 +832,7 @@ def main():
     print("    l) Dart-Liga (Meisterschaft)")
     print("    u) Dart Duel (1v1 Challenge)")
     print("    p) Statistik-Export")
+    print("    v) Handicap-System")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -897,6 +898,10 @@ def main():
         if menu == "p":
             from export import export_menu
             export_menu()
+            continue
+        if menu == "v":
+            from handicap import handicap_menu
+            handicap_menu()
             continue
         if menu == "e":
             from settings import settings_menu
