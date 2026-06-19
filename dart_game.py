@@ -834,6 +834,7 @@ def main():
     print("    p) Statistik-Export")
     print("    v) Handicap-System")
     print("    g) Records & Streaks")
+    print("    y) Party-Modus (Elimination)")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -907,6 +908,10 @@ def main():
         if menu == "g":
             from records import records_menu
             records_menu()
+            continue
+        if menu == "y":
+            from party import party_menu
+            party_menu()
             continue
         if menu == "e":
             from settings import settings_menu
