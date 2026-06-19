@@ -93,10 +93,18 @@ class Statistics:
         print(f"{'─' * 40}")
 
 
+GAME_MODES = {
+    "301": 301,
+    "501": 501,
+    "701": 701,
+}
+
+
 class Player:
-    def __init__(self, name, is_cpu=False):
+    def __init__(self, name, start_score=501, is_cpu=False):
         self.name = name
-        self.score = 501
+        self.score = start_score
+        self.start_score = start_score
         self.darts_thrown = 0
         self.rounds = 0
         self.stats = Statistics()
@@ -122,8 +130,8 @@ class CPUPlayer(Player):
         "schwer": "Profi",
     }
 
-    def __init__(self, name, difficulty="mittel"):
-        super().__init__(name, is_cpu=True)
+    def __init__(self, name, difficulty="mittel", start_score=501):
+        super().__init__(name, start_score=start_score, is_cpu=True)
         self.difficulty = difficulty
         self.spread = self.DIFFICULTIES[difficulty]
 
@@ -271,9 +279,25 @@ def choose_difficulty():
         print("  Bitte 1, 2 oder 3 wählen.")
 
 
+def choose_game_mode():
+    print("\n  Punkte-Modus:")
+    print("    1) 301  (Kurzes Spiel)")
+    print("    2) 501  (Standard)")
+    print("    3) 701  (Langes Spiel)")
+    while True:
+        choice = input("  Wahl (1-3): ").strip()
+        if choice == "1":
+            return 301
+        elif choice == "2":
+            return 501
+        elif choice == "3":
+            return 701
+        print("  Bitte 1, 2 oder 3 wählen.")
+
+
 def main():
     print("=" * 40)
-    print(f"{'DART SPIEL - 501':^40}")
+    print(f"{'DART SPIEL':^40}")
     print("=" * 40)
 
     print("\n  Hauptmenü:")
@@ -290,7 +314,9 @@ def main():
             continue
         print("  Bitte 1 oder 2 wählen.")
 
-    print("\n  Spielmodus:")
+    start_score = choose_game_mode()
+
+    print("\n  Gegner-Modus:")
     print("    1) Nur Menschen")
     print("    2) Gegen KI-Gegner")
     while True:
@@ -315,7 +341,7 @@ def main():
         name = input(f"Name Spieler {i + 1}: ").strip()
         if not name:
             name = f"Spieler {i + 1}"
-        players.append(Player(name))
+        players.append(Player(name, start_score=start_score))
 
     if mode == "2":
         num_cpu = 0
@@ -333,12 +359,12 @@ def main():
         for i in range(num_cpu):
             cpu_name = CPU_NAMES[i % len(CPU_NAMES)]
             diff_label = CPUPlayer.DIFFICULTY_NAMES[difficulty]
-            cpu = CPUPlayer(f"{cpu_name} ({diff_label})", difficulty)
+            cpu = CPUPlayer(f"{cpu_name} ({diff_label})", difficulty, start_score=start_score)
             players.append(cpu)
 
     board = DartBoard()
 
-    print("\nSpiel startet! Ziel: Von 501 auf genau 0.")
+    print(f"\nSpiel startet! Modus: {start_score} - Ziel: Von {start_score} auf genau 0.")
 
     game_over = False
     while not game_over:
