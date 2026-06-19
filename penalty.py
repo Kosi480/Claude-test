@@ -116,7 +116,7 @@ def run_penalty_shootout(p1_name, p2_name):
         print(f"\n  {Color.BOLD}{Color.YELLOW}SUDDEN DEATH!{Color.RESET}")
         sd_round = 0
 
-        while p1_goals == p2_goals:
+        while p1_goals == p2_goals and sd_round < 20:
             sd_round += 1
             print(f"\n  {Color.RED}Sudden Death Runde {sd_round}{Color.RESET}")
 

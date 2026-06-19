@@ -173,7 +173,7 @@ def run_puzzle(player_name, num_puzzles=8, show_hints=True):
     print(Color.title(f"{'PUZZLE - ERGEBNIS':^50}"))
     print(f"{Color.muted('═' * 50)}")
 
-    accuracy = solved / num_puzzles * 100
+    accuracy = (solved / num_puzzles * 100) if num_puzzles > 0 else 0
     print(f"\n  {Color.BOLD}{player_name}{Color.RESET}")
     print(f"  Punkte:    {Color.BOLD}{score}{Color.RESET}")
     print(f"  Gelöst:    {solved}/{num_puzzles} ({accuracy:.0f}%)")
