@@ -819,6 +819,7 @@ def main():
     print("    t) Dart-Trivia-Quiz")
     print("    h) Spielverlauf")
     print("    r) Checkout-Rechner")
+    print("    b) Dart-Kasino (Wetten)")
     print("    0) Beenden")
     while True:
         menu = input("  Wahl (0-9/s): ").strip().lower()
@@ -849,6 +850,10 @@ def main():
         if menu == "r":
             from calculator import calculator_menu
             calculator_menu()
+            continue
+        if menu == "b":
+            from betting import betting_menu
+            betting_menu()
             continue
         if menu == "8":
             Highscores.display()
