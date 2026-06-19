@@ -831,6 +831,7 @@ def main():
     print("    x) Dart-Simulator (CPU vs CPU)")
     print("    l) Dart-Liga (Meisterschaft)")
     print("    u) Dart Duel (1v1 Challenge)")
+    print("    p) Statistik-Export")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -892,6 +893,10 @@ def main():
         if menu == "u":
             from duel import duel_menu
             duel_menu()
+            continue
+        if menu == "p":
+            from export import export_menu
+            export_menu()
             continue
         if menu == "e":
             from settings import settings_menu
