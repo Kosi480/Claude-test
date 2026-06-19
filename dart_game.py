@@ -542,6 +542,11 @@ def play_round(player, board, recorder=None, commentary=None):
 
         player.stats.record_throw(result, points)
         if not player.is_cpu:
+            try:
+                from heatmap import HeatmapTracker
+                HeatmapTracker.record_throw(player.name, result, points)
+            except ImportError:
+                pass
             print(ascii_board.render(result))
             celebration_animation(result)
 
@@ -819,6 +824,7 @@ def main():
     print("    t) Dart-Trivia-Quiz")
     print("    h) Spielverlauf")
     print("    r) Checkout-Rechner")
+    print("    w) Wurf-Heatmap")
     print("    b) Dart-Kasino (Wetten)")
     print("    n) Saison-System")
     print("    ?) Hilfe & Tutorial")
@@ -852,6 +858,10 @@ def main():
         if menu == "r":
             from calculator import calculator_menu
             calculator_menu()
+            continue
+        if menu == "w":
+            from heatmap import heatmap_menu
+            heatmap_menu()
             continue
         if menu == "b":
             from betting import betting_menu
