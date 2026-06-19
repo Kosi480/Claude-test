@@ -840,6 +840,45 @@ class TestBracketNoneVsNone(unittest.TestCase):
         self.assertEqual(result, "Alice")
 
 
+class TestDailyFailRetry(unittest.TestCase):
+    def test_failed_challenge_allows_retry(self):
+        from daily import mark_completed, is_completed_today
+        import tempfile, os, daily
+        old_file = daily.DAILY_FILE
+        try:
+            daily.DAILY_FILE = tempfile.mktemp(suffix=".json")
+            challenge = {"id": "test", "xp_reward": 50}
+            mark_completed("TestPlayer", challenge, False)
+            self.assertFalse(is_completed_today("TestPlayer"))
+            mark_completed("TestPlayer", challenge, True)
+            self.assertTrue(is_completed_today("TestPlayer"))
+        finally:
+            if os.path.exists(daily.DAILY_FILE):
+                os.remove(daily.DAILY_FILE)
+            daily.DAILY_FILE = old_file
+
+
+class TestBettingLossAccuracy(unittest.TestCase):
+    def test_remove_coins_caps_loss(self):
+        from betting import Wallet
+        import tempfile, os, betting
+        old_file = betting.WALLET_FILE
+        try:
+            betting.WALLET_FILE = tempfile.mktemp(suffix=".json")
+            Wallet.get_or_create("TestP")
+            wallets = Wallet.load_all()
+            wallets["TestP"]["coins"] = 30
+            Wallet.save_all(wallets)
+            Wallet.remove_coins("TestP", 50)
+            wallets = Wallet.load_all()
+            self.assertEqual(wallets["TestP"]["coins"], 0)
+            self.assertEqual(wallets["TestP"]["total_lost"], 30)
+        finally:
+            if os.path.exists(betting.WALLET_FILE):
+                os.remove(betting.WALLET_FILE)
+            betting.WALLET_FILE = old_file
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("  TIEFE SPIELTESTS - Umfassende Edge Cases")

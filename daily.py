@@ -124,11 +124,10 @@ def mark_completed(player_name, challenge, succeeded):
         elif p["last_day"] != today:
             p["streak"] = 1
         p["total_completed"] += 1
+        p["last_day"] = today
     else:
         if p["last_day"] != yesterday and p["last_day"] != today:
             p["streak"] = 0
-
-    p["last_day"] = today
     progress[player_name] = p
     save_daily_progress(progress)
     return p

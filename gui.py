@@ -972,6 +972,8 @@ class DartGameGUI:
                 return 0
 
         def on_throw(result, points):
+            if current_target[0] >= len(targets):
+                return
             total_darts[0] += 1
             target = targets[current_target[0]]
             hit_num = parse_num(result)
@@ -1131,6 +1133,7 @@ class DartGameGUI:
                     match_card(seg)
                     match_card(first_pick[0])
                     game_log.log(f"  PAAR GEFUNDEN! {sym}", "hit")
+                    state[0] = "picking_first"
 
                     if pairs_found[0] >= 6:
                         game_log.log(f"\nALLE PAARE GEFUNDEN!", "header")
@@ -2063,10 +2066,10 @@ class DartGameGUI:
                 alive = [e for e in enemies[0] if e["hp"] > 0]
                 hit_enemy = None
 
-                if result == "Bullseye":
+                if result in ("Bullseye", "Bull"):
                     if alive:
                         hit_enemy = alive[0]
-                        hit_enemy["hp"] -= 50
+                        hit_enemy["hp"] -= 50 if result == "Bullseye" else 25
                 elif hit_num > 0:
                     for e in alive:
                         if e["position"] == hit_num:
@@ -2298,6 +2301,7 @@ class DartGameGUI:
                 else:
                     game_log.log(f"\nUNENTSCHIEDEN! Sudden Death!", "header")
                     round_num[0] = 5
+                    update_display()
                     return
                 board_widget.canvas.unbind("<Button-1>")
                 return
@@ -4224,7 +4228,7 @@ class DartGameGUI:
                 lines.append(f"  {n}: {hearts} -> {target}{shield}")
             alive = [n for n in state["order"] if state["players"][n]["alive"]]
             if state["started"] and alive:
-                cur = alive[state["current_idx"] % len(alive)]
+                cur = state.get("current_player", alive[state["current_idx"] % len(alive)])
                 lines.append(f"\n  Am Zug: {cur} (Dart {state['dart']+1}/3)")
             status_lbl.config(text="\n".join(lines))
 
@@ -4246,6 +4250,7 @@ class DartGameGUI:
             state["started"] = True
             state["current_idx"] = 0
             state["dart"] = 0
+            state["current_player"] = plist[0]
             log.clear()
             log.add("Assassin gestartet!", "info")
             for n in plist:
@@ -4267,8 +4272,12 @@ class DartGameGUI:
                 return
             alive = [n for n in state["order"] if state["players"][n]["alive"]]
             if len(alive) <= 1:
+                if alive:
+                    log.add(f"\n{alive[0]} GEWINNT ASSASSIN!", "success")
+                state["started"] = False
+                update_display()
                 return
-            cur = alive[state["current_idx"] % len(alive)]
+            cur = state["current_player"]
             target_name = state["targets"].get(cur, "")
             hit_num, hit_type = parse_hit_number(result)
             log.add(f"{cur}: {result} ({points})", "hit" if points > 0 else "miss")
@@ -4311,6 +4320,7 @@ class DartGameGUI:
                     state["started"] = False
                 else:
                     state["current_idx"] = (state["current_idx"] + 1) % len(alive2)
+                    state["current_player"] = alive2[state["current_idx"]]
             update_display()
 
         board.on_throw = on_throw
@@ -4361,6 +4371,7 @@ class DartGameGUI:
             if not state["started"]:
                 return
             if state["busted"]:
+                state["darts"] += 1
                 state["dart_in_round"] += 1
                 if state["dart_in_round"] >= 3:
                     state["dart_in_round"] = 0

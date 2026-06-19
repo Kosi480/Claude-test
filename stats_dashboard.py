@@ -181,9 +181,16 @@ def display_comparison(name1, name2):
         elo2 = "-"
     rows.append(("Elo", elo1, elo2))
 
+    def _parse_val(v):
+        v = v.strip().rstrip("%")
+        if "/" in v:
+            parts = v.split("/")
+            return float(parts[0]) / float(parts[1]) if float(parts[1]) != 0 else 0.0
+        return float(v)
+
     for label, v1, v2 in rows:
         try:
-            n1, n2 = float(v1.rstrip("%")), float(v2.rstrip("%"))
+            n1, n2 = _parse_val(v1), _parse_val(v2)
             if n1 > n2:
                 v1_fmt = f"{Color.GREEN}{v1}{Color.RESET}"
                 v2_fmt = v2

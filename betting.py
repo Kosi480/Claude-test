@@ -64,8 +64,9 @@ class Wallet:
         wallets = cls.load_all()
         if name not in wallets:
             return 0
-        wallets[name]["coins"] = max(0, wallets[name]["coins"] - amount)
-        wallets[name]["total_lost"] += amount
+        actual_loss = min(wallets[name]["coins"], amount)
+        wallets[name]["coins"] = wallets[name]["coins"] - actual_loss
+        wallets[name]["total_lost"] += actual_loss
         cls.save_all(wallets)
         return wallets[name]["coins"]
 
