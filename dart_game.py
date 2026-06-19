@@ -62,11 +62,21 @@ class Color:
         return f"{Color.GRAY}{text}{Color.RESET}"
 
 
+SKILL_LEVELS = {
+    "anfänger":       {"spread": 0.55, "label": "Anfänger",       "desc": "Große Streuung, viele Misses"},
+    "gelegenheit":    {"spread": 0.42, "label": "Gelegenheit",    "desc": "Lockerer Kneipenabend"},
+    "standard":       {"spread": 0.35, "label": "Standard",       "desc": "Normaler Dartspieler"},
+    "fortgeschritten":{"spread": 0.27, "label": "Fortgeschritten","desc": "Vereinsspieler-Niveau"},
+    "profi":          {"spread": 0.18, "label": "Profi",          "desc": "Turnier-Genauigkeit"},
+}
+SKILL_ORDER = ["anfänger", "gelegenheit", "standard", "fortgeschritten", "profi"]
+
+
 class DartBoard:
     SEGMENTS = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5]
 
-    def throw(self):
-        accuracy = random.gauss(0, 0.35)
+    def throw(self, spread=0.35):
+        accuracy = random.gauss(0, spread)
 
         if abs(accuracy) < 0.05:
             return ("Bullseye", 50)
@@ -229,7 +239,7 @@ GAME_MODES = {
 
 
 class Player:
-    def __init__(self, name, start_score=501, is_cpu=False):
+    def __init__(self, name, start_score=501, is_cpu=False, skill="standard"):
         self.name = name
         self.score = start_score
         self.start_score = start_score
@@ -237,6 +247,8 @@ class Player:
         self.rounds = 0
         self.stats = Statistics()
         self.is_cpu = is_cpu
+        self.skill = skill
+        self.spread = SKILL_LEVELS[skill]["spread"]
 
     def update_score(self, points):
         if self.score - points < 0:
@@ -524,7 +536,7 @@ def play_round(player, board, recorder=None):
         else:
             input(f"  Dart {dart}/3 - [Enter] zum Werfen...")
             throw_animation()
-            result, points = board.throw()
+            result, points = board.throw(spread=player.spread)
 
         player.stats.record_throw(result, points)
         if not player.is_cpu:
@@ -691,6 +703,18 @@ def choose_tournament_mode():
         print("  Bitte 1, 2, 3 oder 4 wählen.")
 
 
+def choose_skill():
+    print(f"\n  {Color.info('Skill-Level wählen:')}")
+    for i, key in enumerate(SKILL_ORDER, 1):
+        info = SKILL_LEVELS[key]
+        print(f"    {i}) {info['label']:<16} {Color.muted(info['desc'])}")
+    while True:
+        choice = input("  Wahl (1-5): ").strip()
+        if choice in ("1", "2", "3", "4", "5"):
+            return SKILL_ORDER[int(choice) - 1]
+        print("  Bitte 1-5 wählen.")
+
+
 def setup_players(start_score=501, is_cricket=False):
     print("\n  Gegner-Modus:")
     print("    1) Nur Menschen")
@@ -712,12 +736,31 @@ def setup_players(start_score=501, is_cricket=False):
         except ValueError:
             print("Bitte eine Zahl eingeben.")
 
+    print(Color.info("\n  Spieler-Skill (beeinflusst Wurfgenauigkeit):"))
+    shared_skill = num_players > 1
+    if shared_skill:
+        print("  Gleiches Skill-Level für alle Spieler?")
+        use_shared = input("  (j/n): ").strip().lower()
+        shared_skill = use_shared != "n"
+
+    if shared_skill and num_players > 1:
+        skill = choose_skill()
+    else:
+        skill = None
+
     players = []
     for i in range(num_players):
-        name = input(f"Name Spieler {i + 1}: ").strip()
+        name = input(f"\nName Spieler {i + 1}: ").strip()
         if not name:
             name = f"Spieler {i + 1}"
-        players.append(Player(name, start_score=start_score))
+        if skill:
+            player_skill = skill
+        else:
+            print(f"  Skill für {name}:")
+            player_skill = choose_skill()
+        skill_label = SKILL_LEVELS[player_skill]["label"]
+        print(f"  {Color.muted(f'  -> {name}: {skill_label}')}")
+        players.append(Player(name, start_score=start_score, skill=player_skill))
 
     if mode == "2":
         num_cpu = 0
