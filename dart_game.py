@@ -682,28 +682,7 @@ def choose_tournament_mode():
         print("  Bitte 1, 2, 3 oder 4 wählen.")
 
 
-def main():
-    print(Color.muted("=" * 40))
-    print(Color.title(f"{'DART SPIEL':^40}"))
-    print(Color.muted("=" * 40))
-
-    print("\n  Hauptmenü:")
-    print("    1) Neues Spiel")
-    print("    2) Highscores anzeigen")
-    while True:
-        menu = input("  Wahl (1-2): ").strip()
-        if menu == "2":
-            Highscores.display()
-            input("\n  [Enter] zum Fortfahren...")
-        if menu in ("1", "2"):
-            if menu == "1":
-                break
-            continue
-        print("  Bitte 1 oder 2 wählen.")
-
-    start_score = choose_game_mode()
-    best_of = choose_tournament_mode()
-
+def setup_players(start_score=501, is_cricket=False):
     print("\n  Gegner-Modus:")
     print("    1) Nur Menschen")
     print("    2) Gegen KI-Gegner")
@@ -750,6 +729,37 @@ def main():
             cpu = CPUPlayer(f"{cpu_name} ({diff_label})", difficulty, start_score=start_score)
             players.append(cpu)
 
+    return players
+
+
+def main():
+    print(Color.muted("=" * 40))
+    print(Color.title(f"{'DART SPIEL':^40}"))
+    print(Color.muted("=" * 40))
+
+    print("\n  Hauptmenü:")
+    print("    1) Neues Spiel (501/301/701)")
+    print("    2) Cricket-Modus")
+    print("    3) Highscores anzeigen")
+    while True:
+        menu = input("  Wahl (1-3): ").strip()
+        if menu == "3":
+            Highscores.display()
+            input("\n  [Enter] zum Fortfahren...")
+            continue
+        if menu == "2":
+            from cricket import play_cricket
+            cricket_players = setup_players(is_cricket=True)
+            play_cricket(cricket_players)
+            print(Color.info("\nDanke fürs Spielen!"))
+            return
+        if menu == "1":
+            break
+        print("  Bitte 1, 2 oder 3 wählen.")
+
+    start_score = choose_game_mode()
+    best_of = choose_tournament_mode()
+    players = setup_players(start_score=start_score)
     board = DartBoard()
     sets_to_win = (best_of // 2) + 1
 
