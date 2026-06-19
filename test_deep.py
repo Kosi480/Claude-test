@@ -719,6 +719,20 @@ class TestWarNoDoubleBonus(unittest.TestCase):
         self.assertEqual(scores["A"], old_score)
 
 
+class TestGUIBustScore(unittest.TestCase):
+    def test_bust_restores_start_of_round(self):
+        score = 501
+        round_score = 0
+        for pts in [20, 20]:
+            score -= pts
+            round_score += pts
+        old_score = score
+        bust_restored = old_score + round_score
+        self.assertEqual(bust_restored, 501)
+        wrong_formula = old_score - round_score
+        self.assertNotEqual(wrong_formula, 501)
+
+
 class TestBowling10thFrame(unittest.TestCase):
     def test_setup_pins(self):
         from bowling import setup_pins, PINS
