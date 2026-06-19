@@ -835,6 +835,7 @@ def main():
     print("    v) Handicap-System")
     print("    g) Records & Streaks")
     print("    y) Party-Modus (Elimination)")
+    print("    z) Countdown (Zeitdruck)")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -912,6 +913,10 @@ def main():
         if menu == "y":
             from party import party_menu
             party_menu()
+            continue
+        if menu == "z":
+            from countdown import countdown_menu
+            countdown_menu()
             continue
         if menu == "e":
             from settings import settings_menu
