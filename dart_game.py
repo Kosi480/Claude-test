@@ -749,31 +749,37 @@ def main():
     print("\n  Hauptmenü:")
     print("    1) Neues Spiel (501/301/701)")
     print("    2) Cricket-Modus")
-    print("    3) Training")
-    print("    4) Replays ansehen")
-    print("    5) Highscores anzeigen")
-    print("    6) Spieler-Profil anzeigen")
+    print("    3) Party-Minispiele (Killer, Shanghai)")
+    print("    4) Training")
+    print("    5) Replays ansehen")
+    print("    6) Highscores anzeigen")
+    print("    7) Spieler-Profil anzeigen")
     while True:
-        menu = input("  Wahl (1-6): ").strip()
-        if menu == "5":
+        menu = input("  Wahl (1-7): ").strip()
+        if menu == "6":
             Highscores.display()
             input("\n  [Enter] zum Fortfahren...")
             continue
-        if menu == "6":
+        if menu == "7":
             from profiles import ProfileManager
             pname = input("  Spielername: ").strip()
             if pname:
                 ProfileManager.display_profile(pname)
             input("\n  [Enter] zum Fortfahren...")
             continue
-        if menu == "4":
+        if menu == "5":
             from replay import replay_menu
             replay_menu()
             continue
-        if menu == "3":
+        if menu == "4":
             from training import training_menu
             training_menu()
             print(Color.info("\nDanke fürs Trainieren!"))
+            return
+        if menu == "3":
+            from minigames import minigames_menu
+            minigames_menu()
+            print(Color.info("\nDanke fürs Spielen!"))
             return
         if menu == "2":
             from cricket import play_cricket
@@ -783,7 +789,7 @@ def main():
             return
         if menu == "1":
             break
-        print("  Bitte 1-6 wählen.")
+        print("  Bitte 1-7 wählen.")
 
     start_score = choose_game_mode()
     best_of = choose_tournament_mode()
