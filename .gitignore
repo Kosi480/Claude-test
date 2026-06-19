@@ -11,5 +11,6 @@ heatmap_data.json
 game_settings.json
 league_data.json
 handicap_data.json
+records_data.json
 exports/
 replays/

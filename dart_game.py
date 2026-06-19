@@ -833,6 +833,7 @@ def main():
     print("    u) Dart Duel (1v1 Challenge)")
     print("    p) Statistik-Export")
     print("    v) Handicap-System")
+    print("    g) Records & Streaks")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -902,6 +903,10 @@ def main():
         if menu == "v":
             from handicap import handicap_menu
             handicap_menu()
+            continue
+        if menu == "g":
+            from records import records_menu
+            records_menu()
             continue
         if menu == "e":
             from settings import settings_menu
