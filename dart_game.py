@@ -839,6 +839,7 @@ def main():
     print("    j) World Tour (Weltreise)")
     print("    a) Achievement Gallery")
     print("    f) Penalty Shootout (1v1)")
+    print("    m) Dart Memory")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -932,6 +933,10 @@ def main():
         if menu == "f":
             from penalty import penalty_menu
             penalty_menu()
+            continue
+        if menu == "m":
+            from memory import memory_menu
+            memory_menu()
             continue
         if menu == "e":
             from settings import settings_menu
