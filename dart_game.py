@@ -10,6 +10,58 @@ import time
 from datetime import datetime
 
 
+class Color:
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    RED = "\033[91m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    MAGENTA = "\033[95m"
+    CYAN = "\033[96m"
+    WHITE = "\033[97m"
+    GRAY = "\033[90m"
+    BG_RED = "\033[41m"
+    BG_GREEN = "\033[42m"
+    BG_YELLOW = "\033[43m"
+
+    @staticmethod
+    def colorize_result(result, points):
+        if result == "Bullseye":
+            return f"{Color.BOLD}{Color.YELLOW}{result} ({points}){Color.RESET}"
+        elif result == "Bull":
+            return f"{Color.BOLD}{Color.GREEN}{result} ({points}){Color.RESET}"
+        elif result.startswith("Triple"):
+            return f"{Color.BOLD}{Color.RED}{result} ({points}){Color.RESET}"
+        elif result.startswith("Double"):
+            return f"{Color.BOLD}{Color.CYAN}{result} ({points}){Color.RESET}"
+        elif result == "Miss":
+            return f"{Color.DIM}{Color.GRAY}{result} ({points}){Color.RESET}"
+        else:
+            return f"{Color.WHITE}{result} ({points}){Color.RESET}"
+
+    @staticmethod
+    def title(text):
+        return f"{Color.BOLD}{Color.YELLOW}{text}{Color.RESET}"
+
+    @staticmethod
+    def success(text):
+        return f"{Color.BOLD}{Color.GREEN}{text}{Color.RESET}"
+
+    @staticmethod
+    def warning(text):
+        return f"{Color.BOLD}{Color.RED}{text}{Color.RESET}"
+
+    @staticmethod
+    def info(text):
+        return f"{Color.CYAN}{text}{Color.RESET}"
+
+    @staticmethod
+    def muted(text):
+        return f"{Color.GRAY}{text}{Color.RESET}"
+
+
 class DartBoard:
     SEGMENTS = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5]
 
@@ -398,26 +450,27 @@ CHECKOUTS = {
 
 def show_checkout_hint(remaining):
     if remaining in CHECKOUTS:
-        print(f"    ** CHECKOUT: {CHECKOUTS[remaining]} **")
+        print(f"    {Color.BOLD}{Color.MAGENTA}** CHECKOUT: {CHECKOUTS[remaining]} **{Color.RESET}")
     elif remaining <= 170:
-        print(f"    (Kein Standard-Checkout für {remaining})")
+        print(Color.muted(f"    (Kein Standard-Checkout für {remaining})"))
 
 
 def display_scoreboard(players):
-    print("\n" + "=" * 40)
-    print(f"{'SCOREBOARD':^40}")
-    print("=" * 40)
+    print("\n" + Color.muted("=" * 40))
+    print(Color.title(f"{'SCOREBOARD':^40}"))
+    print(Color.muted("=" * 40))
     for p in players:
-        print(f"  {p.name:<20} {p.score:>5} Punkte")
-    print("=" * 40)
+        score_color = Color.success if p.score < 100 else (Color.info if p.score < 200 else lambda x: x)
+        print(f"  {p.name:<20} {score_color(f'{p.score:>5}')} Punkte")
+    print(Color.muted("=" * 40))
 
 
 ascii_board = AsciiDartBoard()
 
 
 def play_round(player, board):
-    print(f"\n--- {player.name} ist dran (Runde {player.rounds + 1}) ---")
-    print(f"    Verbleibend: {player.score} Punkte")
+    print(f"\n{Color.BOLD}--- {player.name} ist dran (Runde {player.rounds + 1}) ---{Color.RESET}")
+    print(f"    Verbleibend: {Color.info(f'{player.score} Punkte')}")
     if player.score <= 170 and not player.is_cpu:
         show_checkout_hint(player.score)
 
@@ -425,7 +478,7 @@ def play_round(player, board):
     for dart in range(1, 4):
         if player.is_cpu:
             time.sleep(0.5)
-            print(f"  Dart {dart}/3 - {player.name} wirft...")
+            print(Color.muted(f"  Dart {dart}/3 - {player.name} wirft..."))
             time.sleep(0.3)
             result, points = player.cpu_throw()
         else:
@@ -437,7 +490,7 @@ def play_round(player, board):
             print(ascii_board.render(result))
 
         if player.score - round_score - points < 0:
-            print(f"    -> {result} ({points} Punkte) - BUST! Runde ungültig!")
+            print(f"    -> {Color.warning('BUST!')} {Color.colorize_result(result, points)} - Runde ungültig!")
             player.stats.record_bust()
             player.stats.record_round(0)
             return
@@ -445,14 +498,14 @@ def play_round(player, board):
         round_score += points
         player.darts_thrown += 1
         remaining_after = player.score - round_score
-        print(f"    -> {result} ({points} Punkte) | Runden-Summe: {round_score}")
+        print(f"    -> {Color.colorize_result(result, points)} | Runden-Summe: {Color.BOLD}{round_score}{Color.RESET}")
         if remaining_after <= 170 and remaining_after > 0 and not player.is_cpu and dart < 3:
             show_checkout_hint(remaining_after)
 
     player.score -= round_score
     player.rounds += 1
     player.stats.record_round(round_score)
-    print(f"    Neuer Stand: {player.score} Punkte")
+    print(f"    Neuer Stand: {Color.info(f'{player.score} Punkte')}")
 
 
 HIGHSCORE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "highscores.json")
@@ -537,9 +590,9 @@ def choose_game_mode():
 
 
 def main():
-    print("=" * 40)
-    print(f"{'DART SPIEL':^40}")
-    print("=" * 40)
+    print(Color.muted("=" * 40))
+    print(Color.title(f"{'DART SPIEL':^40}"))
+    print(Color.muted("=" * 40))
 
     print("\n  Hauptmenü:")
     print("    1) Neues Spiel")
@@ -605,7 +658,7 @@ def main():
 
     board = DartBoard()
 
-    print(f"\nSpiel startet! Modus: {start_score} - Ziel: Von {start_score} auf genau 0.")
+    print(Color.success(f"\nSpiel startet! Modus: {start_score} - Ziel: Von {start_score} auf genau 0."))
 
     game_over = False
     while not game_over:
@@ -613,26 +666,26 @@ def main():
         for player in players:
             play_round(player, board)
             if player.score == 0:
-                print(f"\n{'*' * 40}")
+                print(f"\n{Color.BOLD}{Color.YELLOW}{'*' * 40}")
                 print(f"  {player.name} GEWINNT mit {player.darts_thrown} Darts!")
-                print(f"{'*' * 40}")
+                print(f"{'*' * 40}{Color.RESET}")
                 if not player.is_cpu:
                     Highscores.add_entry(
                         player.name,
                         player.darts_thrown,
                         player.stats.average_per_round,
                     )
-                    print("  Ergebnis in Highscores gespeichert!")
+                    print(Color.success("  Ergebnis in Highscores gespeichert!"))
                 game_over = True
                 break
 
-    print("\n" + "=" * 40)
-    print(f"{'ENDSTATISTIKEN':^40}")
-    print("=" * 40)
+    print("\n" + Color.muted("=" * 40))
+    print(Color.title(f"{'ENDSTATISTIKEN':^40}"))
+    print(Color.muted("=" * 40))
     for player in players:
         player.stats.display(player.name)
 
-    print("\nDanke fürs Spielen!")
+    print(Color.info("\nDanke fürs Spielen!"))
 
 
 if __name__ == "__main__":
