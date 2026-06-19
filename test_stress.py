@@ -665,6 +665,32 @@ def stress_maze_display(seed):
             assert "N" in cell and "S" in cell and "E" in cell and "W" in cell
 
 
+def stress_party(seed):
+    random.seed(seed)
+    from party import calc_score, parse_result
+    from dart_game import DartBoard
+    board = DartBoard()
+    for score_type in ["max_points", "min_points", "even_only", "odd_only",
+                       "doubles_only", "triples_only", "bull_only",
+                       "low_numbers", "high_numbers"]:
+        throws = []
+        for _ in range(3):
+            r, p = board.throw()
+            throws.append(parse_result(r, p))
+        score = calc_score(throws, score_type)
+        if score_type == "min_points":
+            assert score <= 0, f"min_points should be <= 0, got {score}"
+        else:
+            assert score >= 0, f"{score_type} should be >= 0, got {score}"
+
+
+def stress_daily(seed):
+    random.seed(seed)
+    from daily import load_daily_progress
+    progress = load_daily_progress()
+    assert isinstance(progress, dict)
+
+
 def main():
     print("=" * 60)
     print("  STRESS-TESTS: 100 Iterationen pro Spielmodus")
@@ -701,6 +727,8 @@ def main():
         ("Bowling", stress_bowling, 50),
         ("Reaction", stress_reaction, 50),
         ("MazeDisplay", stress_maze_display, 50),
+        ("Party", stress_party, 100),
+        ("Daily", stress_daily, 50),
     ]
 
     for name, fn, iters in tests:
