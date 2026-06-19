@@ -3280,7 +3280,7 @@ class DartGameGUI:
             if state["started"]:
                 alive = [n for n in state["order"] if state["players"][n]["alive"]]
                 if alive:
-                    cur = alive[state["current_idx"] % len(alive)]
+                    cur = state.get("current_player", alive[state["current_idx"] % len(alive)])
                     lines.append(f"\n  Am Zug: {cur} (Dart {state['dart']+1}/3)")
             status_lbl.config(text="\n".join(lines))
 
@@ -3301,6 +3301,7 @@ class DartGameGUI:
             state["started"] = True
             state["current_idx"] = 0
             state["dart"] = 0
+            state["current_player"] = plist[0]
             log.clear()
             log.add(f"Killer gestartet mit {len(plist)} Spielern!", "info")
             for n in plist:
@@ -3327,8 +3328,9 @@ class DartGameGUI:
                 else:
                     log.add("KILLER beendet - alle eliminiert!", "success")
                 state["started"] = False
+                update_display()
                 return
-            cur = alive[state["current_idx"] % len(alive)]
+            cur = state["current_player"]
             p = state["players"][cur]
             hit_num, hit_type = parse_hit_number(result)
             log.add(f"{cur}: {result} ({points})", "hit" if hit_type == "double" else "miss")
@@ -3348,7 +3350,6 @@ class DartGameGUI:
             state["dart"] += 1
             if state["dart"] >= 3:
                 state["dart"] = 0
-                state["current_idx"] = (state["current_idx"] + 1) % len(alive)
                 alive2 = [n for n in state["order"] if state["players"][n]["alive"]]
                 if len(alive2) == 1:
                     log.add(f"{alive2[0]} GEWINNT KILLER!", "success")
@@ -3357,7 +3358,8 @@ class DartGameGUI:
                     log.add("Alle ausgeschieden!", "info")
                     state["started"] = False
                 else:
-                    state["current_idx"] = state["current_idx"] % len(alive2)
+                    state["current_idx"] = (state["current_idx"] + 1) % len(alive2)
+                    state["current_player"] = alive2[state["current_idx"]]
             update_display()
 
         board.on_throw = on_throw
@@ -4764,8 +4766,9 @@ class DartGameGUI:
         def sim():
             if not state["spinning"]:
                 start_spin()
-            r, p = board.simulate_throw()
-            on_throw(r, p)
+            if state["spinning"]:
+                r, p = board.simulate_throw()
+                on_throw(r, p)
 
         ttk.Button(btn_frame, text="Drehen (10 Cr)", command=lambda: start_spin() if not state["spinning"] else None).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)

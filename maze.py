@@ -134,7 +134,7 @@ def run_maze(width=5, height=5, fog=True):
 
         print(f"  -> {Color.colorize_result(result, points)}", end="")
 
-        if result == "Bullseye":
+        if result in ("Bullseye", "Bull"):
             print(f" - {Color.YELLOW}Karte aufgedeckt!{Color.RESET}")
             display_maze(maze, px, py, exit_x, exit_y, fog=False)
             continue

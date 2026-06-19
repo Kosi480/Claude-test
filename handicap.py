@@ -27,8 +27,11 @@ def load_handicaps():
 
 
 def save_handicaps(data):
-    with open(HANDICAP_FILE, "w") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        with open(HANDICAP_FILE, "w") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except (IOError, OSError):
+        pass
 
 
 def get_player_avg(player_name):

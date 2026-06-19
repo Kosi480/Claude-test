@@ -135,7 +135,12 @@ def run_penalty_shootout(p1_name, p2_name):
             if not g1 and g2:
                 break
 
-    winner = p1_name if p1_goals > p2_goals else p2_name
+    if p1_goals > p2_goals:
+        winner = p1_name
+    elif p2_goals > p1_goals:
+        winner = p2_name
+    else:
+        winner = None
 
     print(f"\n{Color.muted('═' * 50)}")
     print(Color.title(f"{'ENDERGEBNIS':^50}"))
@@ -147,7 +152,10 @@ def run_penalty_shootout(p1_name, p2_name):
     print(f"\n  {Color.BOLD}{p1_name}{Color.RESET}: {p1_bar}  = {Color.BOLD}{p1_goals}{Color.RESET}")
     print(f"  {Color.BOLD}{p2_name}{Color.RESET}: {p2_bar}  = {Color.BOLD}{p2_goals}{Color.RESET}")
 
-    print(f"\n  {Color.BOLD}{Color.YELLOW}⚽ {winner} gewinnt das Elfmeterschießen! ⚽{Color.RESET}")
+    if winner:
+        print(f"\n  {Color.BOLD}{Color.YELLOW}⚽ {winner} gewinnt das Elfmeterschießen! ⚽{Color.RESET}")
+    else:
+        print(f"\n  {Color.BOLD}{Color.YELLOW}⚽ UNENTSCHIEDEN! ⚽{Color.RESET}")
     print(f"  Endstand: {p1_goals} - {p2_goals}")
     print(f"{Color.muted('═' * 50)}")
 

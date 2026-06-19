@@ -304,8 +304,11 @@ def load_tour_progress():
 
 
 def save_tour_progress(data):
-    with open(TOUR_FILE, "w") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        with open(TOUR_FILE, "w") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except (IOError, OSError):
+        pass
 
 
 def run_world_tour(player_name):

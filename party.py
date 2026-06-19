@@ -101,7 +101,7 @@ def calc_score(throws, score_type):
         return sum(t["points"] for t in throws)
     elif score_type == "min_points":
         pts = sum(t["points"] for t in throws)
-        return -pts if pts > 0 else -9999
+        return -pts if pts > 0 else 0
     elif score_type == "even_only":
         return sum(t["points"] for t in throws if t["number"] % 2 == 0 and t["number"] > 0)
     elif score_type == "odd_only":

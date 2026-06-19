@@ -36,8 +36,11 @@ def load_records():
 
 
 def save_records(data):
-    with open(RECORDS_FILE, "w") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        with open(RECORDS_FILE, "w") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except (IOError, OSError):
+        pass
 
 
 def get_player_records(player_name):

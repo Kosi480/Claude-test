@@ -10,8 +10,11 @@ EXPORT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "exports")
 
 
 def ensure_export_dir():
-    if not os.path.exists(EXPORT_DIR):
-        os.makedirs(EXPORT_DIR)
+    try:
+        if not os.path.exists(EXPORT_DIR):
+            os.makedirs(EXPORT_DIR)
+    except (IOError, OSError):
+        pass
 
 
 def load_json(filename):

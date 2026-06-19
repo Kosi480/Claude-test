@@ -61,8 +61,11 @@ class Settings:
                 pass
 
     def save(self):
-        with open(SETTINGS_FILE, "w") as f:
-            json.dump(self.data, f, indent=2, ensure_ascii=False)
+        try:
+            with open(SETTINGS_FILE, "w") as f:
+                json.dump(self.data, f, indent=2, ensure_ascii=False)
+        except (IOError, OSError):
+            pass
 
     def get(self, key, default=None):
         return self.data.get(key, default if default is not None else DEFAULTS.get(key))
