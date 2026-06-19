@@ -391,6 +391,8 @@ class DartGameGUI:
              lambda: self._placeholder("Dart Assassin")),
             ("Dart Puzzle", "Zahlenraetsel loesen", COLORS["green"],
              lambda: self._placeholder("Dart Puzzle")),
+            ("Tower Defense", "Verteidige deine Basis", COLORS["red"],
+             self.show_gui_tower_defense),
         ]
 
         for text, desc, color, cmd in tools:
@@ -1806,6 +1808,254 @@ class DartGameGUI:
 
         ttk.Button(btn_frame, text="🎯 Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="← Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_tower_defense(self):
+        self.clear_frame()
+        self._make_header("TOWER DEFENSE")
+
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+
+        towers = {}
+        base_hp = [10]
+        gold = [0]
+        wave_num = [1]
+        kills = [0]
+        phase = ["build"]
+        build_darts = [3]
+        attack_darts = [3]
+        enemies = [[] for _ in range(1)]
+        enemies[0] = self._gen_wave(1)
+
+        status_frame = tk.Frame(right, bg=COLORS["card"])
+        status_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        tk.Label(status_frame, text="STATUS", bg=COLORS["card"], fg=COLORS["accent"],
+                 font=("Arial", 12, "bold")).pack(pady=5)
+
+        hp_label = tk.Label(status_frame, text="Basis: " + "♥" * 10, bg=COLORS["card"],
+                            fg=COLORS["red"], font=("Arial", 12, "bold"))
+        hp_label.pack(padx=10, pady=2)
+
+        gold_label = tk.Label(status_frame, text="Gold: 0", bg=COLORS["card"],
+                              fg=COLORS["yellow"], font=("Arial", 11, "bold"))
+        gold_label.pack(padx=10, pady=2)
+
+        wave_label = tk.Label(status_frame, text="Welle: 1 | Bauphase", bg=COLORS["card"],
+                              fg=COLORS["fg"], font=("Arial", 11))
+        wave_label.pack(padx=10, pady=2)
+
+        tower_frame = tk.Frame(right, bg=COLORS["card"])
+        tower_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        tk.Label(tower_frame, text="TUERME", bg=COLORS["card"], fg=COLORS["accent"],
+                 font=("Arial", 11, "bold")).pack(pady=3)
+
+        tower_list = tk.Label(tower_frame, text="Keine", bg=COLORS["card"],
+                              fg=COLORS["muted"], font=("Arial", 9),
+                              justify=tk.LEFT, anchor="w")
+        tower_list.pack(padx=10, pady=2, fill=tk.X)
+
+        enemy_frame = tk.Frame(right, bg=COLORS["card"])
+        enemy_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        tk.Label(enemy_frame, text="FEINDE", bg=COLORS["card"], fg=COLORS["red"],
+                 font=("Arial", 11, "bold")).pack(pady=3)
+
+        enemy_list = tk.Label(enemy_frame, text="", bg=COLORS["card"],
+                              fg=COLORS["fg"], font=("Arial", 9),
+                              justify=tk.LEFT, anchor="w")
+        enemy_list.pack(padx=10, pady=2, fill=tk.X)
+
+        game_log = GameLog(right)
+        game_log.pack(fill=tk.BOTH, expand=True)
+        game_log.log("TOWER DEFENSE", "header")
+        game_log.log(f"Welle 1 - BAUPHASE ({build_darts[0]} Darts)\n", "info")
+
+        def update_display():
+            hp_label.config(text="Basis: " + "♥" * base_hp[0] + "♡" * (10 - base_hp[0]))
+            gold_label.config(text=f"Gold: {gold[0]} | Kills: {kills[0]}")
+
+            phase_name = "Bauphase" if phase[0] == "build" else "Kampfphase"
+            darts = build_darts[0] if phase[0] == "build" else attack_darts[0]
+            wave_label.config(text=f"Welle: {wave_num[0]} | {phase_name} | Darts: {darts}")
+
+            if towers:
+                lines = []
+                for seg in sorted(towers.keys()):
+                    t_type = towers[seg]["type"]
+                    names = {"single": "Wachturm", "double": "Kanone", "triple": "Festung"}
+                    lines.append(f"Seg {seg}: {names[t_type]}")
+                tower_list.config(text="\n".join(lines), fg=COLORS["green"])
+            else:
+                tower_list.config(text="Keine", fg=COLORS["muted"])
+
+            if enemies[0]:
+                lines = []
+                for e in enemies[0]:
+                    if e["hp"] > 0:
+                        lines.append(f"{e['name']} HP:{e['hp']}/{e['max_hp']} Seg:{e['position']}")
+                enemy_list.config(text="\n".join(lines) if lines else "Alle besiegt!")
+            else:
+                enemy_list.config(text="Keine Feinde")
+
+        def next_wave():
+            wave_num[0] += 1
+            enemies[0] = self._gen_wave(wave_num[0])
+            phase[0] = "build"
+            build_darts[0] = 3
+            attack_darts[0] = 3
+            game_log.log(f"\nWelle {wave_num[0]} - BAUPHASE", "info")
+            update_display()
+
+        def on_throw(result, points):
+            if base_hp[0] <= 0:
+                return
+
+            parts = result.split()
+            hit_num = 0
+            hit_type = "single"
+            if len(parts) == 2:
+                try:
+                    hit_num = int(parts[1])
+                except ValueError:
+                    hit_num = 0
+                if parts[0] == "Double":
+                    hit_type = "double"
+                elif parts[0] == "Triple":
+                    hit_type = "triple"
+
+            if phase[0] == "build":
+                if result == "Bullseye":
+                    for t in towers.values():
+                        if t["type"] == "single":
+                            t["type"] = "double"
+                        elif t["type"] == "double":
+                            t["type"] = "triple"
+                    game_log.log(f"  {result} - Alle Tuerme aufgewertet!", "hit")
+                elif result == "Bull":
+                    gold[0] += 25
+                    game_log.log(f"  {result} - +25 Gold!", "hit")
+                elif hit_num > 0:
+                    if hit_num in towers:
+                        old = towers[hit_num]["type"]
+                        if (old == "single" and hit_type in ("double", "triple")) or \
+                           (old == "double" and hit_type == "triple"):
+                            towers[hit_num]["type"] = hit_type
+                            game_log.log(f"  {result} - Turm aufgewertet!", "hit")
+                        else:
+                            game_log.log(f"  {result} - Turm bereits da", "miss")
+                    else:
+                        towers[hit_num] = {"type": hit_type}
+                        names = {"single": "Wachturm", "double": "Kanone", "triple": "Festung"}
+                        game_log.log(f"  {result} - {names[hit_type]} gebaut!", "hit")
+                else:
+                    game_log.log(f"  {result} - daneben", "miss")
+
+                build_darts[0] -= 1
+                if build_darts[0] <= 0:
+                    phase[0] = "attack"
+                    game_log.log(f"\nKAMPFPHASE! ({attack_darts[0]} Darts)", "info")
+
+            elif phase[0] == "attack":
+                alive = [e for e in enemies[0] if e["hp"] > 0]
+                hit_enemy = None
+
+                if result == "Bullseye":
+                    if alive:
+                        hit_enemy = alive[0]
+                        hit_enemy["hp"] -= 50
+                elif hit_num > 0:
+                    for e in alive:
+                        if e["position"] == hit_num:
+                            hit_enemy = e
+                            break
+                    if hit_enemy:
+                        hit_enemy["hp"] -= points
+
+                if hit_enemy:
+                    if hit_enemy["hp"] <= 0:
+                        hit_enemy["hp"] = 0
+                        gold[0] += hit_enemy["reward"]
+                        kills[0] += 1
+                        e_name = hit_enemy["name"]
+                        e_reward = hit_enemy["reward"]
+                        game_log.log(f"  {result} - {e_name} besiegt! +{e_reward}G", "hit")
+                    else:
+                        e_name = hit_enemy["name"]
+                        game_log.log(f"  {result} - {e_name} getroffen!", "hit")
+                else:
+                    game_log.log(f"  {result} - daneben", "miss")
+
+                attack_darts[0] -= 1
+                if attack_darts[0] <= 0:
+                    dmg_map = {"single": 1, "double": 3, "triple": 5}
+                    for seg, tower in towers.items():
+                        for e in enemies[0]:
+                            if e["hp"] > 0 and e["position"] == seg:
+                                d = dmg_map[tower["type"]]
+                                e["hp"] = max(0, e["hp"] - d)
+                                if e["hp"] <= 0:
+                                    gold[0] += e["reward"]
+                                    kills[0] += 1
+
+                    survivors = sum(1 for e in enemies[0] if e["hp"] > 0)
+                    if survivors > 0:
+                        base_hp[0] = max(0, base_hp[0] - survivors)
+                        game_log.log(f"  {survivors} Feinde treffen Basis! -{survivors} HP", "miss")
+
+                    if base_hp[0] <= 0:
+                        game_log.log(f"\nGAME OVER! Welle {wave_num[0]}", "header")
+                        board_widget.canvas.unbind("<Button-1>")
+                    else:
+                        alive = sum(1 for e in enemies[0] if e["hp"] > 0)
+                        if alive == 0:
+                            bonus = wave_num[0] * 5
+                            gold[0] += bonus
+                            game_log.log(f"  Welle geschafft! +{bonus}G Bonus", "hit")
+                        next_wave()
+
+            update_display()
+
+        board_widget = DartBoardCanvas(left, size=420, on_throw=on_throw)
+        board_widget.pack(pady=5)
+
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+
+        def sim():
+            r, p = board_widget.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="🎯 Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="← Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+        update_display()
+
+    def _gen_wave(self, wave_num):
+        enemy_types = [
+            {"name": "Goblin", "hp": 2, "reward": 5},
+            {"name": "Ork", "hp": 4, "reward": 10},
+            {"name": "Troll", "hp": 7, "reward": 20},
+            {"name": "Drache", "hp": 12, "reward": 50},
+        ]
+        enemies = []
+        count = min(3 + wave_num, 8)
+        for _ in range(count):
+            tier = min(wave_num // 2, len(enemy_types) - 1)
+            t = random.randint(0, tier)
+            e = dict(enemy_types[t])
+            e["hp"] = int(e["hp"] * (1 + wave_num * 0.1))
+            e["max_hp"] = e["hp"]
+            e["position"] = random.randint(1, 20)
+            enemies.append(e)
+        return enemies
 
     def _placeholder(self, name):
         messagebox.showinfo("Kommt bald",
