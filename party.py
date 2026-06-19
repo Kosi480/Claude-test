@@ -200,8 +200,10 @@ def run_party_mode(player_names):
             print(f"\n  {Color.RED}{Color.BOLD}{loser} ist ELIMINIERT!{Color.RESET}")
             active.remove(loser)
         else:
-            if scores[winner] > scores[loser]:
+            if scores[winner] >= scores[loser]:
                 active.remove(loser)
+            else:
+                active.remove(winner)
 
         print(f"\n  {Color.muted('Punktestand:')}")
         for p in sorted(scores.items(), key=lambda x: -x[1]):

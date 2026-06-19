@@ -573,6 +573,56 @@ def stress_parse_hit(seed):
         assert typ != "miss" or fmt == "Miss", f"Failed to parse: {fmt} -> {num},{typ}"
 
 
+def stress_memory(seed):
+    random.seed(seed)
+    from memory import create_memory_board, get_segment_from_throw
+    from dart_game import DartBoard
+    board = DartBoard()
+    mem_board, segments = create_memory_board(6)
+    assert len(segments) == 12, f"Expected 12 segments, got {len(segments)}"
+    symbols = [mem_board[s]["symbol"] for s in segments]
+    from collections import Counter
+    counts = Counter(symbols)
+    for sym, cnt in counts.items():
+        assert cnt == 2, f"Symbol {sym} appears {cnt} times, expected 2"
+    for _ in range(50):
+        r, p = board.throw()
+        seg = get_segment_from_throw(r)
+        assert seg >= 0, f"Negative segment: {seg} for {r}"
+
+
+def stress_treasure(seed):
+    random.seed(seed)
+    from treasure import create_map
+    grid, treasures = create_map()
+    assert grid is not None
+    assert len(grid) > 0
+    assert len(grid[0]) > 0
+    t_count = sum(1 for row in grid for cell in row if cell == "T")
+    assert t_count >= 1, f"No treasures on map"
+    assert len(treasures) >= 1, f"Empty treasures list"
+
+
+def stress_world_tour(seed):
+    random.seed(seed)
+    from dart_game import DartBoard
+    from training import parse_hit_number
+    board = DartBoard()
+    score = 501
+    darts = 0
+    for _ in range(200):
+        r, p = board.throw()
+        _, ht = parse_hit_number(r)
+        darts += 1
+        if score - p < 0 or score - p == 1:
+            continue
+        if score - p == 0 and ht in ("double", "bullseye"):
+            score = 0
+            break
+        score -= p
+    assert score >= 0, f"World tour 501 went negative: {score}"
+
+
 def main():
     print("=" * 60)
     print("  STRESS-TESTS: 100 Iterationen pro Spielmodus")
@@ -602,6 +652,9 @@ def main():
         ("Duel", stress_duel, 100),
         ("Countdown", stress_countdown, 100),
         ("Puzzle", stress_puzzle, 100),
+        ("Memory", stress_memory, 50),
+        ("Treasure", stress_treasure, 50),
+        ("WorldTour501", stress_world_tour, 100),
         ("ParseHit", stress_parse_hit, 100),
     ]
 
