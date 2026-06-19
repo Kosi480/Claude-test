@@ -811,8 +811,8 @@ def main():
     print("\n  Hauptmenü:")
     print("    1) Neues Spiel (501/301/701)")
     print("    2) Cricket-Modus")
-    print("    3) Party-Minispiele (Killer, Shanghai)")
-    print("    4) Training")
+    print("    3) Party-Minispiele (Killer, Shanghai, Bingo)")
+    print("    4) Training (inkl. Speed Darts)")
     print("    5) Tägliche Challenge")
     print("    6) Replays ansehen")
     print("    7) Leaderboard (Elo-Rangliste)")
@@ -827,6 +827,7 @@ def main():
     print("    w) Wurf-Heatmap")
     print("    b) Dart-Kasino (Wetten)")
     print("    n) Saison-System")
+    print("    k) Bracket-Turnier (4/8 Spieler)")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
     while True:
@@ -871,6 +872,11 @@ def main():
             from seasons import seasons_menu
             seasons_menu()
             continue
+        if menu == "k":
+            from bracket import bracket_menu
+            bracket_menu()
+            print(Color.info("\nDanke fürs Spielen!"))
+            return
         if menu == "?":
             from tutorial import tutorial_menu
             tutorial_menu()
