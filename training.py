@@ -199,10 +199,11 @@ def training_menu():
     print("    3) Triple Challenge (30 Darts)")
     print("    4) Speed Darts (Reaktionstest)")
     print("    5) Target Practice (Zieltraining)")
-    print("    6) Zurück")
+    print("    6) Kombo-Challenge (Streak-Bonus)")
+    print("    7) Zurück")
 
     while True:
-        choice = input("  Wahl (1-6): ").strip()
+        choice = input("  Wahl (1-7): ").strip()
         if choice == "1":
             around_the_clock()
             return
@@ -221,5 +222,9 @@ def training_menu():
             target_practice_menu()
             return
         elif choice == "6":
+            from combos import combo_menu
+            combo_menu()
             return
-        print("  Bitte 1-6 wählen.")
+        elif choice == "7":
+            return
+        print("  Bitte 1-7 wählen.")
