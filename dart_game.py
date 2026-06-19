@@ -815,6 +815,7 @@ def main():
     print("    9) Spieler-Profil anzeigen")
     print("    s) Statistik-Dashboard")
     print("    c) Custom Game (eigene Regeln)")
+    print("    d) Sound-Demo")
     print("    0) Beenden")
     while True:
         menu = input("  Wahl (0-9/s): ").strip().lower()
@@ -830,6 +831,10 @@ def main():
             custom_game_menu()
             print(Color.info("\nDanke fürs Spielen!"))
             return
+        if menu == "d":
+            from sounds import demo_sounds
+            demo_sounds()
+            continue
         if menu == "8":
             Highscores.display()
             input("\n  [Enter] zum Fortfahren...")
