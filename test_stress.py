@@ -623,6 +623,48 @@ def stress_world_tour(seed):
     assert score >= 0, f"World tour 501 went negative: {score}"
 
 
+def stress_bowling(seed):
+    random.seed(seed)
+    from bowling import setup_pins, check_hit, PINS
+    from dart_game import DartBoard
+    board = DartBoard()
+    pins = setup_pins()
+    total_knocked = 0
+    for _ in range(12):
+        r, p = board.throw()
+        knocked = check_hit(r, pins)
+        total_knocked += len(knocked)
+        standing = sum(1 for pin in PINS if pins[pin]["standing"])
+        assert standing >= 0, f"Negative standing pins"
+        if standing == 0:
+            pins = setup_pins()
+
+
+def stress_reaction(seed):
+    random.seed(seed)
+    from reaction import TARGETS, check_target_hit
+    from dart_game import DartBoard
+    board = DartBoard()
+    for target in TARGETS:
+        for _ in range(20):
+            r, p = board.throw()
+            hit = check_target_hit(r, target)
+            assert isinstance(hit, bool), f"check_target_hit must return bool"
+        assert target["match_num"] <= 25, f"match_num {target['match_num']} > 25 for {target['label']}"
+
+
+def stress_maze_display(seed):
+    random.seed(seed)
+    from maze import generate_maze
+    maze = generate_maze(5, 5)
+    assert len(maze) == 5
+    assert len(maze[0]) == 5
+    for y in range(5):
+        for x in range(5):
+            cell = maze[y][x]
+            assert "N" in cell and "S" in cell and "E" in cell and "W" in cell
+
+
 def main():
     print("=" * 60)
     print("  STRESS-TESTS: 100 Iterationen pro Spielmodus")
@@ -656,6 +698,9 @@ def main():
         ("Treasure", stress_treasure, 50),
         ("WorldTour501", stress_world_tour, 100),
         ("ParseHit", stress_parse_hit, 100),
+        ("Bowling", stress_bowling, 50),
+        ("Reaction", stress_reaction, 50),
+        ("MazeDisplay", stress_maze_display, 50),
     ]
 
     for name, fn, iters in tests:
