@@ -818,6 +818,7 @@ def main():
     print("    d) Sound-Demo")
     print("    t) Dart-Trivia-Quiz")
     print("    h) Spielverlauf")
+    print("    r) Checkout-Rechner")
     print("    0) Beenden")
     while True:
         menu = input("  Wahl (0-9/s): ").strip().lower()
@@ -844,6 +845,10 @@ def main():
         if menu == "h":
             from match_history import history_menu
             history_menu()
+            continue
+        if menu == "r":
+            from calculator import calculator_menu
+            calculator_menu()
             continue
         if menu == "8":
             Highscores.display()
