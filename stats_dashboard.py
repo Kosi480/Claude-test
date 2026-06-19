@@ -61,7 +61,7 @@ def display_career_overview(name):
     print(f"    Darts gesamt:    {p.total_darts}")
 
     if p.total_darts > 0 and p.total_rounds > 0:
-        avg_per_dart = p.total_darts / p.total_rounds * 3 if p.total_rounds > 0 else 0
+        avg_per_dart = p.total_darts / p.total_rounds if p.total_rounds > 0 else 0
         print(f"    Darts/Runde:     {avg_per_dart:.1f}")
 
     print(f"    Bullseyes:       {Color.YELLOW}{p.total_bullseyes}{Color.RESET}")
@@ -111,7 +111,7 @@ def display_elo_history(name):
 
     if history:
         elo_values = []
-        current = info.get("peak_elo", 1000)
+        current = info.get("elo", 1000)
         for h in reversed(history):
             current = current - h["elo_change"]
         for h in history:

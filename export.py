@@ -159,7 +159,11 @@ def export_heatmap_summary(player_name=None):
     if hm:
         data = hm.get(player_name, hm) if player_name else hm
         if isinstance(data, dict):
-            segments = data.get("segments", {})
+            segments = {}
+            for ring in ("singles", "doubles", "triples"):
+                ring_data = data.get(ring, {})
+                for seg, count in ring_data.items():
+                    segments[seg] = segments.get(seg, 0) + count
             if segments:
                 sorted_segs = sorted(segments.items(), key=lambda x: -x[1])
                 lines.append("\n  Meistgetroffene Segmente:")
@@ -167,7 +171,13 @@ def export_heatmap_summary(player_name=None):
                     bar = "#" * min(count, 30)
                     lines.append(f"    {seg:>12}: {bar} ({count})")
 
-            rings = data.get("rings", {})
+            rings = {}
+            for ring in ("singles", "doubles", "triples", "bull", "bullseye", "miss"):
+                val = data.get(ring, 0)
+                if isinstance(val, dict):
+                    rings[ring] = sum(val.values())
+                else:
+                    rings[ring] = val
             if rings:
                 lines.append("\n  Ring-Verteilung:")
                 for ring, count in sorted(rings.items(), key=lambda x: -x[1]):

@@ -156,7 +156,7 @@ def settings_menu():
             for i, key in enumerate(SKILL_ORDER, 1):
                 print(f"    {i}) {SKILL_LEVELS[key]['label']}")
             sc = input("  Wahl (1-5): ").strip()
-            if sc in "12345":
+            if sc in ("1", "2", "3", "4", "5"):
                 skill = SKILL_ORDER[int(sc) - 1]
                 settings.set("default_skill", skill)
                 print(f"  Skill: {Color.BOLD}{SKILL_LEVELS[skill]['label']}{Color.RESET}")
@@ -176,7 +176,7 @@ def settings_menu():
                 print(f"    {i}) {info['name']} - {Color.muted(info['desc'])}")
             sc = input("  Wahl (1-3): ").strip()
             themes = list(COLOR_THEMES.keys())
-            if sc in "123":
+            if sc in ("1", "2", "3"):
                 settings.set("color_theme", themes[int(sc) - 1])
                 print(f"  Schema: {Color.BOLD}{COLOR_THEMES[themes[int(sc) - 1]]['name']}{Color.RESET}")
         elif choice == "9":

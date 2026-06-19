@@ -417,7 +417,6 @@ def play_league_session(league, skill):
                 finish_league(league)
                 return
             else:
-                league["current_round"] += 1
                 print(Color.info(f"\n  Weiter zu Spieltag {league['current_round']}!"))
                 continue
 
