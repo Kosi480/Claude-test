@@ -359,38 +359,34 @@ class DartGameGUI:
              self.show_standard_game),
             ("Cricket", "Nummern schliessen", COLORS["accent2"],
              self.show_cricket),
-            ("Party-Minispiele", "Killer, Shanghai, Bingo & mehr", COLORS["yellow"],
+            ("Party-Minispiele", "Killer, Shanghai & mehr", COLORS["yellow"],
              self.show_minigames_menu),
-            ("Dart Bowling", "10 Frames Bowling mit Darts", COLORS["accent"],
-             self.show_gui_bowling),
-            ("Dart Memory", "Finde die Paare", COLORS["accent2"],
-             self.show_gui_memory),
-            ("Dart Blackjack", "Kartenspiel 21", COLORS["red"],
-             self.show_gui_blackjack),
-            ("Dart War", "Territorien erobern", COLORS["accent"],
-             self.show_gui_war),
+            ("Training", "Alle Trainingsmodi", COLORS["accent"],
+             self.show_training_menu),
+            ("Abenteuer", "Tower Defense, World Tour & mehr", COLORS["red"],
+             self.show_adventure_menu),
         ]
 
         for text, desc, color, cmd in games:
             btn = MenuButton(left, text, desc, cmd, color)
             btn.pack(fill=tk.X, pady=3)
 
-        tk.Label(right, text="TRAINING & TOOLS", bg=COLORS["bg"], fg=COLORS["accent"],
+        tk.Label(right, text="MEHR SPIELE", bg=COLORS["bg"], fg=COLORS["accent"],
                  font=("Arial", 14, "bold"), anchor="w").pack(fill=tk.X, pady=(0, 10))
 
         tools = [
             ("Freies Werfen", "Wirf auf die Dartscheibe", COLORS["accent"],
              self.show_free_throw),
-            ("Around the Clock", "1-20 + Bull der Reihe nach", COLORS["yellow"],
-             self.show_around_the_clock),
-            ("Treasure Hunt", "Erkunde die Schatzkarte", COLORS["accent2"],
-             self.show_gui_treasure),
-            ("Tower Defense", "Verteidige deine Basis", COLORS["red"],
-             self.show_gui_tower_defense),
-            ("Penalty Shootout", "Elfmeter-Duell", COLORS["green"],
-             self.show_gui_penalty),
-            ("Dart Puzzle", "Zahlenraetsel loesen", COLORS["accent2"],
-             self.show_gui_puzzle),
+            ("Dart Bowling", "10 Frames Bowling", COLORS["yellow"],
+             self.show_gui_bowling),
+            ("Dart Memory", "Finde die Paare", COLORS["accent2"],
+             self.show_gui_memory),
+            ("Dart Blackjack", "Kartenspiel 21", COLORS["red"],
+             self.show_gui_blackjack),
+            ("Dart Duel", "1v1 Kampf", COLORS["accent"],
+             self.show_gui_duel),
+            ("Countdown", "501 runter auf 0", COLORS["green"],
+             self.show_gui_countdown),
         ]
 
         for text, desc, color, cmd in tools:
@@ -419,18 +415,26 @@ class DartGameGUI:
         canvas.configure(yscrollcommand=scrollbar.set)
 
         games = [
-            ("Shanghai", "Triff 15-20 + Bull der Reihe nach", COLORS["accent2"],
+            ("Killer", "Double-Duell 3+ Spieler", COLORS["red"],
+             self.show_gui_killer),
+            ("Shanghai", "Triff 15-20 + Bull", COLORS["accent2"],
              self.show_gui_shanghai),
-            ("Dart Roulette", "Drehe das Gluecksrad", COLORS["yellow"],
+            ("Dart Bingo", "5x5 Bingo-Karte", COLORS["yellow"],
+             self.show_gui_bingo),
+            ("Dart Roulette", "Gluecksrad", COLORS["accent"],
              self.show_gui_roulette),
-            ("Dart Golf", "9 Loecher mit Par-System", COLORS["green"],
+            ("Dart Golf", "9 Loecher Par-System", COLORS["green"],
              self.show_gui_golf),
-            ("Math Darts", "Kopfrechnen + Werfen", COLORS["accent2"],
+            ("Dart Poker", "Poker-Haende werfen", COLORS["accent2"],
+             self.show_gui_poker),
+            ("Lucky Number", "Glueckszahl treffen", COLORS["yellow"],
+             self.show_gui_lucky_number),
+            ("Math Darts", "Kopfrechnen", COLORS["accent"],
              self.show_gui_math),
-            ("Dart Blackjack", "Kartenspiel 21", COLORS["red"],
-             self.show_gui_blackjack),
-            ("Dart War", "Territorien erobern", COLORS["accent"],
+            ("Dart War", "Territorien erobern", COLORS["red"],
              self.show_gui_war),
+            ("Dart Assassin", "Geheime Ziele", COLORS["accent2"],
+             self.show_gui_assassin),
         ]
 
         for text, desc, color, cmd in games:
@@ -454,14 +458,50 @@ class DartGameGUI:
              self.show_around_the_clock),
             ("Double Out", "D1-D20 Training", COLORS["accent2"],
              self.show_gui_double_out),
-            ("Triple Challenge", "30 Darts auf Triples", COLORS["accent"],
+            ("Triple Challenge", "30 Darts Triples", COLORS["accent"],
              self.show_gui_triple_challenge),
-            ("Target Practice", "Zieltraining auf Segmente", COLORS["yellow"],
+            ("Target Practice", "Zieltraining", COLORS["yellow"],
              self.show_gui_target_practice),
-            ("Tower Defense", "Basis verteidigen", COLORS["red"],
-             self.show_gui_tower_defense),
+            ("Speed Darts", "Schnell treffen!", COLORS["red"],
+             self.show_gui_speed_darts),
+            ("Kombo-Challenge", "Streak-Bonus", COLORS["accent2"],
+             self.show_gui_combos),
+            ("Endurance", "Ueberlebensmodus", COLORS["accent"],
+             self.show_gui_endurance),
+            ("Reaktionstest", "Reflex-Training", COLORS["yellow"],
+             self.show_gui_reaction),
             ("Dart Puzzle", "Zahlenraetsel", COLORS["green"],
              self.show_gui_puzzle),
+        ]
+
+        for text, desc, color, cmd in modes:
+            btn = MenuButton(content, text, desc, cmd, color)
+            btn.pack(fill=tk.X, pady=3)
+
+        self._make_back_button(content)
+
+    def show_adventure_menu(self):
+        self.clear_frame()
+        self._make_header("ABENTEUER")
+
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True, padx=30, pady=20)
+
+        modes = [
+            ("Tower Defense", "Basis verteidigen", COLORS["red"],
+             self.show_gui_tower_defense),
+            ("World Tour", "Reise um die Welt", COLORS["green"],
+             self.show_gui_world_tour),
+            ("Survival", "Wellen-Modus", COLORS["accent"],
+             self.show_gui_survival),
+            ("Treasure Hunt", "Schatzkarte erkunden", COLORS["accent2"],
+             self.show_gui_treasure),
+            ("Penalty Shootout", "Elfmeter-Duell", COLORS["yellow"],
+             self.show_gui_penalty),
+            ("Dart Trivia", "Wissensfragen", COLORS["accent"],
+             self.show_gui_trivia),
+            ("Countdown", "501 runter auf 0", COLORS["green"],
+             self.show_gui_countdown),
         ]
 
         for text, desc, color, cmd in modes:
@@ -3144,6 +3184,1400 @@ class DartGameGUI:
 
         ttk.Button(btn_frame, text="🎯 Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="← Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_killer(self):
+        self.clear_frame()
+        self._make_header("KILLER")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        state = {
+            "players": {},
+            "order": [],
+            "current_idx": 0,
+            "dart": 0,
+            "started": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 11), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+        import random as rnd
+
+        def update_display():
+            lines = []
+            for n in state["order"]:
+                p = state["players"][n]
+                if not p["alive"]:
+                    lines.append(f"  {n}: AUSGESCHIEDEN")
+                    continue
+                hearts = "V" * p["lives"] + "." * (3 - p["lives"])
+                killer = " [KILLER]" if p["is_killer"] else ""
+                lines.append(f"  {n}: {hearts} D{p['number']}{killer}")
+            if state["started"]:
+                alive = [n for n in state["order"] if state["players"][n]["alive"]]
+                if alive:
+                    cur = alive[state["current_idx"] % len(alive)]
+                    lines.append(f"\n  Am Zug: {cur} (Dart {state['dart']+1}/3)")
+            status_lbl.config(text="\n".join(lines))
+
+        def start_game():
+            names = name_entry.get().strip()
+            if not names:
+                names = "Spieler 1,Spieler 2,Spieler 3"
+            plist = [n.strip() for n in names.split(",") if n.strip()]
+            if len(plist) < 2:
+                plist = ["Spieler 1", "Spieler 2", "Spieler 3"]
+            segs = rnd.sample(range(1, 21), min(len(plist), 20))
+            state["order"] = plist
+            for i, n in enumerate(plist):
+                state["players"][n] = {
+                    "number": segs[i], "lives": 3,
+                    "is_killer": False, "alive": True,
+                }
+            state["started"] = True
+            state["current_idx"] = 0
+            state["dart"] = 0
+            log.clear()
+            log.add(f"Killer gestartet mit {len(plist)} Spielern!", "info")
+            for n in plist:
+                log.add(f"  {n}: Ziel = D{state['players'][n]['number']}", "info")
+            setup_frame.pack_forget()
+            update_display()
+
+        setup_frame = tk.Frame(right, bg=COLORS["panel"])
+        setup_frame.pack(fill=tk.X, pady=5)
+        tk.Label(setup_frame, text="Spieler (kommagetrennt):", bg=COLORS["panel"],
+                 fg=COLORS["text"]).pack(pady=2)
+        name_entry = tk.Entry(setup_frame, width=30)
+        name_entry.insert(0, "Alice,Bob,Charlie")
+        name_entry.pack(pady=2)
+        ttk.Button(setup_frame, text="Spiel starten", command=start_game).pack(pady=5)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            alive = [n for n in state["order"] if state["players"][n]["alive"]]
+            if len(alive) <= 1:
+                log.add(f"{alive[0]} GEWINNT KILLER!", "success")
+                return
+            cur = alive[state["current_idx"] % len(alive)]
+            p = state["players"][cur]
+            hit_num, hit_type = parse_hit_number(result)
+            log.add(f"{cur}: {result} ({points})", "hit" if hit_type == "double" else "miss")
+            if hit_type == "double":
+                if hit_num == p["number"] and not p["is_killer"]:
+                    p["is_killer"] = True
+                    log.add(f"  {cur} ist jetzt KILLER!", "success")
+                elif p["is_killer"]:
+                    for vn, vd in state["players"].items():
+                        if vn != cur and vd["alive"] and vd["number"] == hit_num:
+                            vd["lives"] -= 1
+                            log.add(f"  {vn} verliert ein Leben! ({vd['lives']})", "warning")
+                            if vd["lives"] <= 0:
+                                vd["alive"] = False
+                                log.add(f"  {vn} ist AUSGESCHIEDEN!", "miss")
+                            break
+            state["dart"] += 1
+            if state["dart"] >= 3:
+                state["dart"] = 0
+                state["current_idx"] = (state["current_idx"] + 1) % len(alive)
+                alive2 = [n for n in state["order"] if state["players"][n]["alive"]]
+                if len(alive2) <= 1:
+                    log.add(f"{alive2[0]} GEWINNT KILLER!", "success")
+                else:
+                    state["current_idx"] = state["current_idx"] % len(alive2)
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_lucky_number(self):
+        self.clear_frame()
+        self._make_header("LUCKY NUMBER")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        import random as rnd
+        state = {
+            "players": [],
+            "scores": {},
+            "round": 1,
+            "max_rounds": 8,
+            "current_idx": 0,
+            "dart": 0,
+            "lucky": 0,
+            "started": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 11), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def new_lucky():
+            state["lucky"] = rnd.randint(1, 20)
+
+        def update_display():
+            lines = [f"  Runde {state['round']}/{state['max_rounds']}"]
+            lines.append(f"  Glueckszahl: {state['lucky']}")
+            for n in state["players"]:
+                lines.append(f"  {n}: {state['scores'].get(n, 0)} Punkte")
+            if state["started"]:
+                cur = state["players"][state["current_idx"] % len(state["players"])]
+                lines.append(f"\n  Am Zug: {cur} (Dart {state['dart']+1}/3)")
+            status_lbl.config(text="\n".join(lines))
+
+        def start_game():
+            names = name_entry.get().strip()
+            if not names:
+                names = "Spieler 1,Spieler 2"
+            plist = [n.strip() for n in names.split(",") if n.strip()]
+            if len(plist) < 2:
+                plist = ["Spieler 1", "Spieler 2"]
+            state["players"] = plist
+            state["scores"] = {n: 0 for n in plist}
+            state["started"] = True
+            state["round"] = 1
+            state["current_idx"] = 0
+            state["dart"] = 0
+            new_lucky()
+            log.clear()
+            log.add("Lucky Number gestartet!", "info")
+            setup_frame.pack_forget()
+            update_display()
+
+        setup_frame = tk.Frame(right, bg=COLORS["panel"])
+        setup_frame.pack(fill=tk.X, pady=5)
+        tk.Label(setup_frame, text="Spieler (kommagetrennt):", bg=COLORS["panel"],
+                 fg=COLORS["text"]).pack(pady=2)
+        name_entry = tk.Entry(setup_frame, width=30)
+        name_entry.insert(0, "Alice,Bob")
+        name_entry.pack(pady=2)
+        ttk.Button(setup_frame, text="Spiel starten", command=start_game).pack(pady=5)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            cur = state["players"][state["current_idx"] % len(state["players"])]
+            hit_num, hit_type = parse_hit_number(result)
+            earned = 0
+            if hit_num == state["lucky"]:
+                mult = {"triple": 3, "double": 2}.get(hit_type, 1)
+                earned = state["lucky"] * mult * 2
+                log.add(f"{cur}: {result} - GLUECKSZAHL! +{earned}", "success")
+            elif points > 0:
+                earned = points
+                log.add(f"{cur}: {result} ({points})", "hit")
+            else:
+                log.add(f"{cur}: {result} - Daneben", "miss")
+            state["scores"][cur] = state["scores"].get(cur, 0) + earned
+            state["dart"] += 1
+            if state["dart"] >= 3:
+                state["dart"] = 0
+                state["current_idx"] += 1
+                if state["current_idx"] >= len(state["players"]):
+                    state["current_idx"] = 0
+                    state["round"] += 1
+                    new_lucky()
+                    if state["round"] > state["max_rounds"]:
+                        winner = max(state["scores"], key=state["scores"].get)
+                        log.add(f"SPIEL VORBEI! {winner} gewinnt!", "success")
+                        for n in state["players"]:
+                            log.add(f"  {n}: {state['scores'][n]}", "info")
+                        state["started"] = False
+                    else:
+                        log.add(f"Runde {state['round']}: Glueckszahl = {state['lucky']}", "info")
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_poker(self):
+        self.clear_frame()
+        self._make_header("DART POKER")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        state = {
+            "players": [],
+            "scores": {},
+            "round": 1,
+            "max_rounds": 5,
+            "current_idx": 0,
+            "dart": 0,
+            "hands": {},
+            "started": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 11), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def evaluate_hand(hits):
+            from collections import Counter
+            nums = [h[0] for h in hits]
+            types = [h[1] for h in hits]
+            c = Counter(nums)
+            pairs = sum(1 for v in c.values() if v >= 2)
+            trips = sum(1 for v in c.values() if v >= 3)
+            has_triple = "triple" in types
+            has_double = "double" in types
+            total = sum(n for n in nums)
+            bonus = 0
+            hand_name = "Nichts"
+            if trips:
+                hand_name = "Drilling"
+                bonus = 100
+            elif pairs >= 2:
+                hand_name = "Zwei Paare"
+                bonus = 75
+            elif pairs == 1:
+                hand_name = "Ein Paar"
+                bonus = 30
+            if has_triple and has_double:
+                hand_name = "Full House"
+                bonus = 150
+            elif sorted(nums) == list(range(min(nums), min(nums)+3)) and len(nums) == 3:
+                hand_name = "Strasse"
+                bonus = 120
+            return hand_name, total + bonus
+
+        def update_display():
+            lines = [f"  Runde {state['round']}/{state['max_rounds']}"]
+            for n in state["players"]:
+                lines.append(f"  {n}: {state['scores'].get(n, 0)} Punkte")
+                hand = state["hands"].get(n, [])
+                if hand:
+                    hstr = ", ".join(f"{h[1][0].upper()}{h[0]}" for h in hand)
+                    lines.append(f"    Hand: [{hstr}]")
+            if state["started"]:
+                cur = state["players"][state["current_idx"] % len(state["players"])]
+                lines.append(f"\n  Am Zug: {cur} (Dart {state['dart']+1}/3)")
+            status_lbl.config(text="\n".join(lines))
+
+        def start_game():
+            names = name_entry.get().strip()
+            if not names:
+                names = "Spieler 1,Spieler 2"
+            plist = [n.strip() for n in names.split(",") if n.strip()]
+            if len(plist) < 2:
+                plist = ["Spieler 1", "Spieler 2"]
+            state["players"] = plist
+            state["scores"] = {n: 0 for n in plist}
+            state["hands"] = {n: [] for n in plist}
+            state["started"] = True
+            state["round"] = 1
+            state["current_idx"] = 0
+            state["dart"] = 0
+            log.clear()
+            log.add("Dart Poker gestartet!", "info")
+            setup_frame.pack_forget()
+            update_display()
+
+        setup_frame = tk.Frame(right, bg=COLORS["panel"])
+        setup_frame.pack(fill=tk.X, pady=5)
+        tk.Label(setup_frame, text="Spieler (kommagetrennt):", bg=COLORS["panel"],
+                 fg=COLORS["text"]).pack(pady=2)
+        name_entry = tk.Entry(setup_frame, width=30)
+        name_entry.insert(0, "Alice,Bob")
+        name_entry.pack(pady=2)
+        ttk.Button(setup_frame, text="Spiel starten", command=start_game).pack(pady=5)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            cur = state["players"][state["current_idx"] % len(state["players"])]
+            hit_num, hit_type = parse_hit_number(result)
+            state["hands"][cur].append((hit_num, hit_type))
+            log.add(f"{cur}: {result} ({points})", "hit" if points > 0 else "miss")
+            state["dart"] += 1
+            if state["dart"] >= 3:
+                hand_name, hand_score = evaluate_hand(state["hands"][cur])
+                log.add(f"  Hand: {hand_name} = {hand_score} Punkte", "info")
+                state["scores"][cur] += hand_score
+                state["hands"][cur] = []
+                state["dart"] = 0
+                state["current_idx"] += 1
+                if state["current_idx"] >= len(state["players"]):
+                    state["current_idx"] = 0
+                    state["round"] += 1
+                    if state["round"] > state["max_rounds"]:
+                        winner = max(state["scores"], key=state["scores"].get)
+                        log.add(f"SPIEL VORBEI! {winner} gewinnt!", "success")
+                        for n in state["players"]:
+                            log.add(f"  {n}: {state['scores'][n]}", "info")
+                        state["started"] = False
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_bingo(self):
+        self.clear_frame()
+        self._make_header("DART BINGO")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        import random as rnd
+        state = {
+            "card": [],
+            "marked": [],
+            "darts": 0,
+            "started": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        card_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                            font=("Courier", 12), justify=tk.LEFT, anchor="w")
+        card_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def update_card():
+            lines = ["  BINGO-KARTE (5x5):\n"]
+            for r in range(5):
+                row_str = "  "
+                for c in range(5):
+                    idx = r * 5 + c
+                    if idx == 12:
+                        row_str += " [X] "
+                    elif idx in state["marked"]:
+                        row_str += f" [X] "
+                    else:
+                        row_str += f" {state['card'][idx]:>2}  "
+                lines.append(row_str)
+            lines.append(f"\n  Darts: {state['darts']}")
+            bingo_count = check_bingo()
+            lines.append(f"  Bingos: {bingo_count}")
+            card_lbl.config(text="\n".join(lines))
+
+        def check_bingo():
+            marked_set = set(state["marked"])
+            marked_set.add(12)
+            count = 0
+            for r in range(5):
+                if all((r * 5 + c) in marked_set for c in range(5)):
+                    count += 1
+            for c in range(5):
+                if all((r * 5 + c) in marked_set for r in range(5)):
+                    count += 1
+            if all((i * 5 + i) in marked_set for i in range(5)):
+                count += 1
+            if all((i * 5 + (4 - i)) in marked_set for i in range(5)):
+                count += 1
+            return count
+
+        def start_bingo():
+            nums = rnd.sample(range(1, 61), 24)
+            state["card"] = nums[:12] + [0] + nums[12:]
+            state["marked"] = []
+            state["darts"] = 0
+            state["started"] = True
+            log.clear()
+            log.add("Bingo gestartet! Triff Zahlen auf der Karte.", "info")
+            log.add("Mitte ist frei. Ziel: komplette Reihen!", "info")
+            setup_btn.pack_forget()
+            update_card()
+
+        setup_btn = ttk.Button(right, text="Neues Bingo-Spiel", command=start_bingo)
+        setup_btn.pack(pady=10)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            state["darts"] += 1
+            hit_num, _ = parse_hit_number(result)
+            found = False
+            for idx, val in enumerate(state["card"]):
+                if val == points and idx not in state["marked"] and idx != 12:
+                    state["marked"].append(idx)
+                    log.add(f"Dart {state['darts']}: {result} ({points}) - TREFFER!", "success")
+                    found = True
+                    break
+            if not found:
+                for idx, val in enumerate(state["card"]):
+                    if val == hit_num and idx not in state["marked"] and idx != 12:
+                        state["marked"].append(idx)
+                        log.add(f"Dart {state['darts']}: {result} ({points}) - {hit_num} markiert!", "hit")
+                        found = True
+                        break
+            if not found:
+                log.add(f"Dart {state['darts']}: {result} ({points}) - Nicht auf Karte", "miss")
+            bc = check_bingo()
+            if bc >= 1:
+                log.add(f"BINGO! {bc} Linie(n) komplett in {state['darts']} Darts!", "success")
+            update_card()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_speed_darts(self):
+        self.clear_frame()
+        self._make_header("SPEED DARTS")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        import time as _time
+        import random as rnd
+        state = {
+            "target": 0,
+            "score": 0,
+            "darts": 0,
+            "max_darts": 20,
+            "hits": 0,
+            "start_time": 0,
+            "started": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="Klicke Start um zu beginnen",
+                              bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 14, "bold"), justify=tk.LEFT)
+        status_lbl.pack(fill=tk.X, padx=8, pady=10)
+
+        def new_target():
+            state["target"] = rnd.randint(1, 20)
+            status_lbl.config(text=f"  ZIEL: {state['target']}\n"
+                                   f"  Darts: {state['darts']}/{state['max_darts']}\n"
+                                   f"  Treffer: {state['hits']}  Punkte: {state['score']}")
+
+        def start_speed():
+            state["score"] = 0
+            state["darts"] = 0
+            state["hits"] = 0
+            state["start_time"] = _time.time()
+            state["started"] = True
+            log.clear()
+            log.add("Speed Darts! Triff die Zielzahlen so schnell wie moeglich!", "info")
+            new_target()
+
+        ttk.Button(btn_frame, text="Start", command=start_speed).pack(side=tk.LEFT, padx=5)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            hit_num, hit_type = parse_hit_number(result)
+            state["darts"] += 1
+            if hit_num == state["target"]:
+                mult = {"triple": 3, "double": 2}.get(hit_type, 1)
+                earned = state["target"] * mult
+                state["score"] += earned
+                state["hits"] += 1
+                elapsed = _time.time() - state["start_time"]
+                log.add(f"Dart {state['darts']}: {result} - TREFFER! +{earned} ({elapsed:.1f}s)", "success")
+                new_target()
+            else:
+                log.add(f"Dart {state['darts']}: {result} - Daneben (Ziel: {state['target']})", "miss")
+            if state["darts"] >= state["max_darts"]:
+                elapsed = _time.time() - state["start_time"]
+                state["started"] = False
+                log.add(f"FERTIG! {state['hits']} Treffer, {state['score']} Punkte in {elapsed:.1f}s", "success")
+                status_lbl.config(text=f"  FERTIG!\n  Treffer: {state['hits']}/{state['max_darts']}\n"
+                                       f"  Punkte: {state['score']}\n  Zeit: {elapsed:.1f}s")
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_combos(self):
+        self.clear_frame()
+        self._make_header("KOMBO-CHALLENGE")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        state = {
+            "score": 0,
+            "streak": 0,
+            "best_streak": 0,
+            "round": 1,
+            "dart": 0,
+            "max_rounds": 10,
+            "last_type": None,
+            "started": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 12), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def update_display():
+            streak_bar = "|" * state["streak"]
+            lines = [
+                f"  Runde {state['round']}/{state['max_rounds']}",
+                f"  Punkte: {state['score']}",
+                f"  Streak: {state['streak']} {streak_bar}",
+                f"  Beste Streak: {state['best_streak']}",
+                f"  Dart {state['dart']+1}/3",
+            ]
+            status_lbl.config(text="\n".join(lines))
+
+        state["started"] = True
+        log.add("Kombo-Challenge! Triff verschiedene Typen hintereinander!", "info")
+        log.add("Single->Double->Triple = Kombo-Bonus!", "info")
+        update_display()
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            hit_num, hit_type = parse_hit_number(result)
+            if hit_type in ("single", "double", "triple"):
+                if state["last_type"] != hit_type:
+                    state["streak"] += 1
+                    bonus = state["streak"] * 5
+                    earned = points + bonus
+                    state["score"] += earned
+                    log.add(f"R{state['round']}: {result} ({points}+{bonus} Streak)", "success")
+                else:
+                    state["streak"] = 1
+                    state["score"] += points
+                    log.add(f"R{state['round']}: {result} ({points}) Streak reset", "warning")
+                state["last_type"] = hit_type
+            else:
+                state["streak"] = 0
+                state["last_type"] = None
+                state["score"] += points
+                log.add(f"R{state['round']}: {result} ({points})", "miss")
+            state["best_streak"] = max(state["best_streak"], state["streak"])
+            state["dart"] += 1
+            if state["dart"] >= 3:
+                state["dart"] = 0
+                state["round"] += 1
+                if state["round"] > state["max_rounds"]:
+                    state["started"] = False
+                    log.add(f"FERTIG! {state['score']} Punkte, Beste Streak: {state['best_streak']}", "success")
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_endurance(self):
+        self.clear_frame()
+        self._make_header("ENDURANCE")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        state = {
+            "hp": 100,
+            "score": 0,
+            "round": 1,
+            "dart": 0,
+            "threshold": 15,
+            "started": True,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 12), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def update_display():
+            hp_bar_len = 20
+            filled = max(0, int(state["hp"] / 100 * hp_bar_len))
+            bar = "#" * filled + "." * (hp_bar_len - filled)
+            lines = [
+                f"  Runde {state['round']}",
+                f"  HP: [{bar}] {state['hp']}/100",
+                f"  Punkte: {state['score']}",
+                f"  Mindestpunktzahl: {state['threshold']}",
+                f"  Dart {state['dart']+1}/3",
+            ]
+            status_lbl.config(text="\n".join(lines))
+
+        log.add("Endurance! Ueberlebe so lange wie moeglich!", "info")
+        log.add(f"Pro Runde mindestens {state['threshold']} Punkte oder HP-Verlust!", "info")
+        update_display()
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            state["score"] += points
+            log.add(f"R{state['round']} D{state['dart']+1}: {result} ({points})", "hit" if points > 0 else "miss")
+            state["dart"] += 1
+            if state["dart"] >= 3:
+                round_total = points
+                if state["score"] < state["threshold"] * state["round"]:
+                    damage = max(5, state["threshold"] - points)
+                    state["hp"] -= damage
+                    log.add(f"  Runde schwach! -{damage} HP", "warning")
+                else:
+                    heal = min(5, 100 - state["hp"])
+                    state["hp"] += heal
+                    if heal > 0:
+                        log.add(f"  Gute Runde! +{heal} HP", "success")
+                state["dart"] = 0
+                state["round"] += 1
+                state["threshold"] = min(state["threshold"] + 2, 60)
+                if state["hp"] <= 0:
+                    state["hp"] = 0
+                    state["started"] = False
+                    log.add(f"GAME OVER! {state['round']-1} Runden, {state['score']} Punkte", "miss")
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_survival(self):
+        self.clear_frame()
+        self._make_header("SURVIVAL")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        import random as rnd
+        state = {
+            "wave": 1,
+            "enemies": 0,
+            "enemies_killed": 0,
+            "hp": 50,
+            "score": 0,
+            "darts_left": 0,
+            "started": False,
+            "total_kills": 0,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 12), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def new_wave():
+            state["enemies"] = 2 + state["wave"]
+            state["enemies_killed"] = 0
+            state["darts_left"] = state["enemies"] + 2
+            log.add(f"Welle {state['wave']}: {state['enemies']} Feinde! ({state['darts_left']} Darts)", "warning")
+
+        def update_display():
+            hp_bar_len = 15
+            filled = max(0, int(state["hp"] / 50 * hp_bar_len))
+            bar = "#" * filled + "." * (hp_bar_len - filled)
+            lines = [
+                f"  Welle {state['wave']}",
+                f"  HP: [{bar}] {state['hp']}/50",
+                f"  Feinde: {state['enemies'] - state['enemies_killed']} uebrig",
+                f"  Darts: {state['darts_left']}",
+                f"  Kills: {state['total_kills']}  Score: {state['score']}",
+            ]
+            status_lbl.config(text="\n".join(lines))
+
+        def start_survival():
+            state["wave"] = 1
+            state["hp"] = 50
+            state["score"] = 0
+            state["total_kills"] = 0
+            state["started"] = True
+            log.clear()
+            log.add("Survival! Besiege Wellen von Feinden!", "info")
+            new_wave()
+            update_display()
+
+        ttk.Button(btn_frame, text="Start", command=start_survival).pack(side=tk.LEFT, padx=5)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            state["darts_left"] -= 1
+            hit_num, hit_type = parse_hit_number(result)
+            kill_threshold = 10 + state["wave"] * 3
+            if points >= kill_threshold:
+                state["enemies_killed"] += 1
+                state["total_kills"] += 1
+                state["score"] += points * 2
+                log.add(f"  {result} ({points}) - Feind besiegt!", "success")
+            elif points > 0:
+                state["score"] += points
+                log.add(f"  {result} ({points}) - Nicht genug Schaden (brauche {kill_threshold})", "warning")
+            else:
+                log.add(f"  {result} - Daneben!", "miss")
+            remaining = state["enemies"] - state["enemies_killed"]
+            if remaining <= 0:
+                bonus = state["wave"] * 10
+                state["score"] += bonus
+                log.add(f"Welle {state['wave']} geschafft! +{bonus} Bonus", "success")
+                state["wave"] += 1
+                new_wave()
+            elif state["darts_left"] <= 0:
+                damage = remaining * 5
+                state["hp"] -= damage
+                log.add(f"{remaining} Feinde erreichen dich! -{damage} HP", "miss")
+                if state["hp"] <= 0:
+                    state["hp"] = 0
+                    state["started"] = False
+                    log.add(f"GAME OVER! Welle {state['wave']}, {state['total_kills']} Kills, {state['score']} Punkte", "miss")
+                else:
+                    state["wave"] += 1
+                    new_wave()
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_reaction(self):
+        self.clear_frame()
+        self._make_header("REAKTIONSTEST")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        import time as _time
+        import random as rnd
+        state = {
+            "target": 0,
+            "round": 0,
+            "max_rounds": 10,
+            "score": 0,
+            "target_time": 0,
+            "started": False,
+            "waiting": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        target_lbl = tk.Label(info, text="Klicke Start!", bg=COLORS["panel"],
+                              fg=COLORS["accent"], font=("Arial", 20, "bold"))
+        target_lbl.pack(pady=10)
+        stats_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                             font=("Courier", 11))
+        stats_lbl.pack(pady=5)
+
+        def show_new_target():
+            state["round"] += 1
+            if state["round"] > state["max_rounds"]:
+                state["started"] = False
+                avg = state["score"] / state["max_rounds"] if state["max_rounds"] > 0 else 0
+                target_lbl.config(text="FERTIG!", fg=COLORS["green"])
+                log.add(f"Test vorbei! Durchschnitt: {avg:.0f} Punkte/Runde", "success")
+                stats_lbl.config(text=f"Gesamt: {state['score']} Punkte")
+                return
+            state["target"] = rnd.randint(1, 20)
+            state["target_time"] = _time.time()
+            target_lbl.config(text=f"ZIEL: {state['target']}", fg=COLORS["accent"])
+            stats_lbl.config(text=f"Runde {state['round']}/{state['max_rounds']} | Score: {state['score']}")
+
+        def start_reaction():
+            state["round"] = 0
+            state["score"] = 0
+            state["started"] = True
+            log.clear()
+            log.add("Reaktionstest! Triff das Ziel so schnell wie moeglich!", "info")
+            show_new_target()
+
+        ttk.Button(btn_frame, text="Start", command=start_reaction).pack(side=tk.LEFT, padx=5)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            hit_num, hit_type = parse_hit_number(result)
+            reaction = _time.time() - state["target_time"]
+            if hit_num == state["target"]:
+                time_bonus = max(0, int(50 - reaction * 10))
+                mult = {"triple": 3, "double": 2}.get(hit_type, 1)
+                earned = state["target"] * mult + time_bonus
+                state["score"] += earned
+                log.add(f"R{state['round']}: {result} TREFFER! +{earned} ({reaction:.1f}s)", "success")
+                show_new_target()
+            else:
+                log.add(f"R{state['round']}: {result} - Daneben! (Ziel: {state['target']})", "miss")
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_assassin(self):
+        self.clear_frame()
+        self._make_header("DART ASSASSIN")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        import random as rnd
+        state = {
+            "players": {},
+            "order": [],
+            "targets": {},
+            "current_idx": 0,
+            "dart": 0,
+            "started": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 11), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def assign_targets():
+            alive = [n for n in state["order"] if state["players"][n]["alive"]]
+            rnd.shuffle(alive)
+            for i, n in enumerate(alive):
+                state["targets"][n] = alive[(i + 1) % len(alive)]
+
+        def update_display():
+            lines = []
+            for n in state["order"]:
+                p = state["players"][n]
+                if not p["alive"]:
+                    lines.append(f"  {n}: ELIMINIERT")
+                    continue
+                hearts = "V" * p["lives"] + "." * (3 - p["lives"])
+                shield = " [SCHILD]" if p["shield"] else ""
+                target = state["targets"].get(n, "?")
+                lines.append(f"  {n}: {hearts} -> {target}{shield}")
+            alive = [n for n in state["order"] if state["players"][n]["alive"]]
+            if state["started"] and alive:
+                cur = alive[state["current_idx"] % len(alive)]
+                lines.append(f"\n  Am Zug: {cur} (Dart {state['dart']+1}/3)")
+            status_lbl.config(text="\n".join(lines))
+
+        def start_game():
+            names = name_entry.get().strip()
+            if not names:
+                names = "Agent A,Agent B,Agent C,Agent D"
+            plist = [n.strip() for n in names.split(",") if n.strip()]
+            if len(plist) < 3:
+                plist = ["Agent A", "Agent B", "Agent C"]
+            segs = rnd.sample(range(1, 21), min(len(plist), 20))
+            state["order"] = plist
+            for i, n in enumerate(plist):
+                state["players"][n] = {
+                    "segment": segs[i], "lives": 3,
+                    "alive": True, "shield": False,
+                }
+            assign_targets()
+            state["started"] = True
+            state["current_idx"] = 0
+            state["dart"] = 0
+            log.clear()
+            log.add("Assassin gestartet!", "info")
+            for n in plist:
+                log.add(f"  {n}: Segment {state['players'][n]['segment']}, Ziel: {state['targets'][n]}", "info")
+            setup_frame.pack_forget()
+            update_display()
+
+        setup_frame = tk.Frame(right, bg=COLORS["panel"])
+        setup_frame.pack(fill=tk.X, pady=5)
+        tk.Label(setup_frame, text="Spieler (kommagetrennt):", bg=COLORS["panel"],
+                 fg=COLORS["text"]).pack(pady=2)
+        name_entry = tk.Entry(setup_frame, width=30)
+        name_entry.insert(0, "Agent A,Agent B,Agent C,Agent D")
+        name_entry.pack(pady=2)
+        ttk.Button(setup_frame, text="Spiel starten", command=start_game).pack(pady=5)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            alive = [n for n in state["order"] if state["players"][n]["alive"]]
+            if len(alive) <= 1:
+                return
+            cur = alive[state["current_idx"] % len(alive)]
+            target_name = state["targets"].get(cur, "")
+            hit_num, hit_type = parse_hit_number(result)
+            log.add(f"{cur}: {result} ({points})", "hit" if points > 0 else "miss")
+            if target_name and target_name in state["players"]:
+                tp = state["players"][target_name]
+                if hit_type == "double" and hit_num == tp["segment"]:
+                    if tp["shield"]:
+                        tp["shield"] = False
+                        log.add(f"  {target_name}s Schild blockt!", "warning")
+                    else:
+                        tp["lives"] -= 1
+                        log.add(f"  {target_name} getroffen! ({tp['lives']} Leben)", "warning")
+                        if tp["lives"] <= 0:
+                            tp["alive"] = False
+                            log.add(f"  {target_name} ELIMINIERT!", "miss")
+                            assign_targets()
+                elif hit_type == "triple" and hit_num == tp["segment"]:
+                    tp["lives"] -= 2
+                    log.add(f"  Triple-Kill! {target_name} -2 Leben ({max(0,tp['lives'])})", "success")
+                    if tp["lives"] <= 0:
+                        tp["alive"] = False
+                        log.add(f"  {target_name} ELIMINIERT!", "miss")
+                        assign_targets()
+                elif hit_num == state["players"][cur]["segment"]:
+                    state["players"][cur]["shield"] = True
+                    log.add(f"  {cur} aktiviert Schild!", "info")
+            state["dart"] += 1
+            if state["dart"] >= 3:
+                state["dart"] = 0
+                alive2 = [n for n in state["order"] if state["players"][n]["alive"]]
+                if len(alive2) <= 1:
+                    log.add(f"{alive2[0]} GEWINNT ASSASSIN!", "success")
+                    state["started"] = False
+                else:
+                    state["current_idx"] = (state["current_idx"] + 1) % len(alive2)
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_countdown(self):
+        self.clear_frame()
+        self._make_header("COUNTDOWN")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        state = {"score": 501, "darts": 0, "round": 1, "dart_in_round": 0, "started": True}
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        score_lbl = tk.Label(info, text="501", bg=COLORS["panel"], fg=COLORS["accent"],
+                             font=("Arial", 36, "bold"))
+        score_lbl.pack(pady=10)
+        detail_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 11))
+        detail_lbl.pack(pady=5)
+
+        def update_display():
+            score_lbl.config(text=str(state["score"]))
+            detail_lbl.config(text=f"Runde {state['round']} | Dart {state['dart_in_round']+1}/3 | "
+                                   f"Gesamt: {state['darts']} Darts")
+
+        log.add("Countdown von 501! Erreiche genau 0.", "info")
+        log.add("Letzter Dart muss ein Double sein!", "info")
+        update_display()
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            hit_num, hit_type = parse_hit_number(result)
+            new_score = state["score"] - points
+            state["darts"] += 1
+            if new_score < 0 or new_score == 1:
+                log.add(f"R{state['round']}: {result} ({points}) - BUST! Bleibt bei {state['score']}", "warning")
+            elif new_score == 0:
+                if hit_type == "double" or result == "Bullseye":
+                    state["score"] = 0
+                    state["started"] = False
+                    log.add(f"R{state['round']}: {result} ({points}) - AUSGECHECKT!", "success")
+                    log.add(f"Geschafft in {state['darts']} Darts!", "success")
+                    score_lbl.config(text="0", fg=COLORS["green"])
+                else:
+                    log.add(f"R{state['round']}: {result} ({points}) - Brauche Double zum Auschecken!", "warning")
+            else:
+                state["score"] = new_score
+                log.add(f"R{state['round']}: {result} ({points}) -> {state['score']}", "hit")
+            state["dart_in_round"] += 1
+            if state["dart_in_round"] >= 3:
+                state["dart_in_round"] = 0
+                state["round"] += 1
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_trivia(self):
+        self.clear_frame()
+        self._make_header("DART TRIVIA")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        questions = [
+            ("Hoechster Single-Wurf?", 20), ("Punkte fuer Bullseye?", 50),
+            ("Segmente auf der Dartscheibe?", 20), ("Punkte fuer Triple 20?", 60),
+            ("Punkte fuer Double 20?", 40), ("Startpunktzahl im Standard?", 501),
+            ("Triple 19 Punkte?", 57), ("Double 16 Punkte?", 32),
+            ("Bull (Outer) Punkte?", 25), ("Hoechster 3-Dart-Finish?", 170),
+        ]
+        import random as rnd
+        rnd.shuffle(questions)
+        state = {"q_idx": 0, "score": 0, "started": True}
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        q_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["accent"],
+                         font=("Arial", 14, "bold"), wraplength=300)
+        q_lbl.pack(pady=10)
+        hint_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["muted"],
+                            font=("Courier", 10))
+        hint_lbl.pack(pady=5)
+
+        def show_question():
+            if state["q_idx"] >= len(questions):
+                state["started"] = False
+                q_lbl.config(text=f"FERTIG! {state['score']}/{len(questions)}")
+                hint_lbl.config(text="")
+                return
+            q, a = questions[state["q_idx"]]
+            q_lbl.config(text=f"Frage {state['q_idx']+1}: {q}")
+            hint_lbl.config(text=f"Antwort mit Punktzahl: Triff {a} Punkte!")
+
+        log.add("Dart Trivia! Beantworte Fragen durch Werfen!", "info")
+        log.add("Triff die richtige Punktzahl als Antwort!", "info")
+        show_question()
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            q, answer = questions[state["q_idx"]]
+            if points == answer:
+                state["score"] += 1
+                log.add(f"F{state['q_idx']+1}: {result} ({points}) - RICHTIG!", "success")
+            else:
+                log.add(f"F{state['q_idx']+1}: {result} ({points}) - Falsch! (Antwort: {answer})", "miss")
+            state["q_idx"] += 1
+            show_question()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_world_tour(self):
+        self.clear_frame()
+        self._make_header("WORLD TOUR")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        cities = [
+            ("London", 20, 501), ("Amsterdam", 18, 401), ("Berlin", 19, 501),
+            ("Paris", 17, 301), ("Tokyo", 16, 501), ("New York", 15, 401),
+            ("Sydney", 14, 301), ("Rio", 13, 501),
+        ]
+        state = {
+            "city_idx": 0, "score": 0, "darts": 0,
+            "city_score": 0, "started": True,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        city_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["accent"],
+                            font=("Arial", 16, "bold"))
+        city_lbl.pack(pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 11), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def show_city():
+            if state["city_idx"] >= len(cities):
+                state["started"] = False
+                city_lbl.config(text="TOUR KOMPLETT!")
+                log.add(f"World Tour geschafft! {state['score']} Punkte, {state['darts']} Darts", "success")
+                return
+            name, seg, target = cities[state["city_idx"]]
+            state["city_score"] = target
+            city_lbl.config(text=f"{name} (Segment {seg})")
+
+        def update_display():
+            if state["city_idx"] < len(cities):
+                name, seg, target = cities[state["city_idx"]]
+                status_lbl.config(text=f"  Stadt {state['city_idx']+1}/{len(cities)}\n"
+                                       f"  Verbleibend: {state['city_score']}\n"
+                                       f"  Gesamt: {state['score']} | Darts: {state['darts']}")
+            else:
+                status_lbl.config(text=f"  Score: {state['score']} | Darts: {state['darts']}")
+
+        log.add("World Tour! Reise um die Welt und spiele in jeder Stadt!", "info")
+        show_city()
+        update_display()
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            state["darts"] += 1
+            name, seg, target = cities[state["city_idx"]]
+            hit_num, hit_type = parse_hit_number(result)
+            if hit_num == seg:
+                mult = {"triple": 3, "double": 2}.get(hit_type, 1)
+                earned = seg * mult
+                state["city_score"] -= earned
+                state["score"] += earned
+                log.add(f"  {name}: {result} ({earned}) -> {max(0, state['city_score'])} uebrig", "success")
+            else:
+                state["score"] += points // 2
+                log.add(f"  {name}: {result} - Falsches Segment (+{points//2})", "warning")
+            if state["city_score"] <= 0:
+                log.add(f"  {name} geschafft!", "success")
+                state["city_idx"] += 1
+                show_city()
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_duel(self):
+        self.clear_frame()
+        self._make_header("DART DUEL")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        state = {
+            "p1": "Spieler 1", "p2": "Spieler 2",
+            "hp1": 100, "hp2": 100,
+            "turn": 1, "round": 1,
+            "started": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 12), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def update_display():
+            b1 = "#" * (state["hp1"] // 5) + "." * (20 - state["hp1"] // 5)
+            b2 = "#" * (state["hp2"] // 5) + "." * (20 - state["hp2"] // 5)
+            cur = state["p1"] if state["turn"] == 1 else state["p2"]
+            lines = [
+                f"  Runde {state['round']}",
+                f"  {state['p1']}: [{b1}] {state['hp1']}",
+                f"  {state['p2']}: [{b2}] {state['hp2']}",
+                f"\n  Am Zug: {cur}",
+            ]
+            status_lbl.config(text="\n".join(lines))
+
+        def start_game():
+            n1 = p1_entry.get().strip() or "Spieler 1"
+            n2 = p2_entry.get().strip() or "Spieler 2"
+            state["p1"] = n1
+            state["p2"] = n2
+            state["hp1"] = 100
+            state["hp2"] = 100
+            state["turn"] = 1
+            state["round"] = 1
+            state["started"] = True
+            log.clear()
+            log.add(f"Duel: {n1} vs {n2}!", "info")
+            setup_frame.pack_forget()
+            update_display()
+
+        setup_frame = tk.Frame(right, bg=COLORS["panel"])
+        setup_frame.pack(fill=tk.X, pady=5)
+        tk.Label(setup_frame, text="Spieler 1:", bg=COLORS["panel"], fg=COLORS["text"]).pack(pady=1)
+        p1_entry = tk.Entry(setup_frame, width=20)
+        p1_entry.insert(0, "Spieler 1")
+        p1_entry.pack(pady=1)
+        tk.Label(setup_frame, text="Spieler 2:", bg=COLORS["panel"], fg=COLORS["text"]).pack(pady=1)
+        p2_entry = tk.Entry(setup_frame, width=20)
+        p2_entry.insert(0, "Spieler 2")
+        p2_entry.pack(pady=1)
+        ttk.Button(setup_frame, text="Duell starten", command=start_game).pack(pady=5)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            attacker = state["p1"] if state["turn"] == 1 else state["p2"]
+            damage = points
+            if result == "Bullseye":
+                damage = 50
+            elif result == "Miss":
+                damage = 0
+            if state["turn"] == 1:
+                state["hp2"] = max(0, state["hp2"] - damage)
+                log.add(f"R{state['round']} {attacker}: {result} -> {damage} Schaden!", "hit" if damage > 0 else "miss")
+                state["turn"] = 2
+            else:
+                state["hp1"] = max(0, state["hp1"] - damage)
+                log.add(f"R{state['round']} {attacker}: {result} -> {damage} Schaden!", "hit" if damage > 0 else "miss")
+                state["turn"] = 1
+                state["round"] += 1
+            if state["hp1"] <= 0:
+                state["started"] = False
+                log.add(f"{state['p2']} GEWINNT DAS DUELL!", "success")
+            elif state["hp2"] <= 0:
+                state["started"] = False
+                log.add(f"{state['p1']} GEWINNT DAS DUELL!", "success")
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
 
     def _placeholder(self, name):
         messagebox.showinfo("Kommt bald",
