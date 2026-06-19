@@ -3696,6 +3696,7 @@ class DartGameGUI:
             bc = check_bingo()
             if bc >= 1:
                 log.add(f"BINGO! {bc} Linie(n) komplett in {state['darts']} Darts!", "success")
+                state["started"] = False
             update_card()
 
         board.on_throw = on_throw
