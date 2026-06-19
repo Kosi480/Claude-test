@@ -829,6 +829,7 @@ def main():
     print("    n) Saison-System")
     print("    k) Bracket-Turnier (4/8 Spieler)")
     print("    x) Dart-Simulator (CPU vs CPU)")
+    print("    l) Dart-Liga (Meisterschaft)")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -882,6 +883,10 @@ def main():
         if menu == "x":
             from simulator import simulator_menu
             simulator_menu()
+            continue
+        if menu == "l":
+            from league import league_menu
+            league_menu()
             continue
         if menu == "e":
             from settings import settings_menu
