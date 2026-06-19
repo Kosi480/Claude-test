@@ -842,6 +842,7 @@ def main():
     print("    m) Dart Memory")
     print("    i) Treasure Hunt (Schatzsuche)")
     print("    o) Dart Bowling (10 Frames)")
+    print("    q) Dart Assassin (3-6 Spieler)")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -947,6 +948,10 @@ def main():
         if menu == "o":
             from bowling import bowling_menu
             bowling_menu()
+            continue
+        if menu == "q":
+            from assassin import assassin_menu
+            assassin_menu()
             continue
         if menu == "e":
             from settings import settings_menu
