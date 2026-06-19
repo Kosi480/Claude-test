@@ -32,16 +32,74 @@ class DartBoard:
             return ("Miss", 0)
 
 
+class Statistics:
+    def __init__(self):
+        self.throws = []
+        self.round_scores = []
+        self.busts = 0
+        self.bullseyes = 0
+        self.triples = 0
+        self.doubles = 0
+        self.misses = 0
+
+    def record_throw(self, result, points):
+        self.throws.append((result, points))
+        if result == "Bullseye":
+            self.bullseyes += 1
+        elif result.startswith("Triple"):
+            self.triples += 1
+        elif result.startswith("Double"):
+            self.doubles += 1
+        elif result == "Miss":
+            self.misses += 1
+
+    def record_round(self, score):
+        self.round_scores.append(score)
+
+    def record_bust(self):
+        self.busts += 1
+
+    @property
+    def average_per_round(self):
+        if not self.round_scores:
+            return 0.0
+        return sum(self.round_scores) / len(self.round_scores)
+
+    @property
+    def highest_round(self):
+        return max(self.round_scores) if self.round_scores else 0
+
+    @property
+    def highest_throw(self):
+        return max((p for _, p in self.throws), default=0)
+
+    def display(self, player_name):
+        print(f"\n{'─' * 40}")
+        print(f"  Statistik: {player_name}")
+        print(f"{'─' * 40}")
+        print(f"  Würfe gesamt:       {len(self.throws)}")
+        print(f"  Durchschnitt/Runde: {self.average_per_round:.1f}")
+        print(f"  Höchste Runde:      {self.highest_round}")
+        print(f"  Höchster Wurf:      {self.highest_throw}")
+        print(f"  Bullseyes:          {self.bullseyes}")
+        print(f"  Triples:            {self.triples}")
+        print(f"  Doubles:            {self.doubles}")
+        print(f"  Misses:             {self.misses}")
+        print(f"  Busts:              {self.busts}")
+        print(f"{'─' * 40}")
+
+
 class Player:
     def __init__(self, name):
         self.name = name
         self.score = 501
         self.darts_thrown = 0
         self.rounds = 0
+        self.stats = Statistics()
 
     def update_score(self, points):
         if self.score - points < 0:
-            return False  # Bust
+            return False
         self.score -= points
         self.darts_thrown += 1
         return True
@@ -64,9 +122,12 @@ def play_round(player, board):
     for dart in range(1, 4):
         input(f"  Dart {dart}/3 - [Enter] zum Werfen...")
         result, points = board.throw()
+        player.stats.record_throw(result, points)
 
         if player.score - round_score - points < 0:
             print(f"    -> {result} ({points} Punkte) - BUST! Runde ungültig!")
+            player.stats.record_bust()
+            player.stats.record_round(0)
             return
 
         round_score += points
@@ -75,6 +136,7 @@ def play_round(player, board):
 
     player.score -= round_score
     player.rounds += 1
+    player.stats.record_round(round_score)
     print(f"    Neuer Stand: {player.score} Punkte")
 
 
@@ -115,6 +177,12 @@ def main():
                 print(f"{'*' * 40}")
                 game_over = True
                 break
+
+    print("\n" + "=" * 40)
+    print(f"{'ENDSTATISTIKEN':^40}")
+    print("=" * 40)
+    for player in players:
+        player.stats.display(player.name)
 
     print("\nDanke fürs Spielen!")
 
