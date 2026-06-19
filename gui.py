@@ -3308,8 +3308,12 @@ class DartGameGUI:
                 state["dart"] = 0
                 state["current_idx"] = (state["current_idx"] + 1) % len(alive)
                 alive2 = [n for n in state["order"] if state["players"][n]["alive"]]
-                if len(alive2) <= 1:
+                if len(alive2) == 1:
                     log.add(f"{alive2[0]} GEWINNT KILLER!", "success")
+                    state["started"] = False
+                elif len(alive2) == 0:
+                    log.add("Alle ausgeschieden!", "info")
+                    state["started"] = False
                 else:
                     state["current_idx"] = state["current_idx"] % len(alive2)
             update_display()

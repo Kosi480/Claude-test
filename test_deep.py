@@ -87,6 +87,13 @@ class TestParseHitNumber(unittest.TestCase):
         self.assertEqual(parse_hit_number("Bull"), (25, "bull"))
         self.assertEqual(parse_hit_number("Miss"), (0, "miss"))
 
+    def test_single_prefix(self):
+        from training import parse_hit_number
+        for i in range(1, 21):
+            num, typ = parse_hit_number(f"Single {i}")
+            self.assertEqual(num, i)
+            self.assertEqual(typ, "single")
+
     def test_garbage(self):
         from training import parse_hit_number
         self.assertEqual(parse_hit_number("xyz"), (0, "miss"))

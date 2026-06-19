@@ -125,11 +125,11 @@ def run_roulette(player_names, num_rounds=8):
                 scores[player] = old_other
                 scores[swap_target] = old_self
                 scores[player] += points
-            else:
-                scores[player] += points
                 print(f"\n    {Color.RED}PUNKTE-TAUSCH!{Color.RESET}")
                 print(f"    {player}: {old_self} → {scores[player]}")
                 print(f"    {swap_target}: {old_other} → {scores[swap_target]}")
+            else:
+                scores[player] += points
 
         print(f"\n  {Color.muted('Zwischenstand:')}")
         sorted_scores = sorted(scores.items(), key=lambda x: -x[1])
