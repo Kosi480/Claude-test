@@ -821,6 +821,7 @@ def main():
     print("    r) Checkout-Rechner")
     print("    b) Dart-Kasino (Wetten)")
     print("    n) Saison-System")
+    print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
     while True:
         menu = input("  Wahl (0-9/s): ").strip().lower()
@@ -859,6 +860,10 @@ def main():
         if menu == "n":
             from seasons import seasons_menu
             seasons_menu()
+            continue
+        if menu == "?":
+            from tutorial import tutorial_menu
+            tutorial_menu()
             continue
         if menu == "8":
             Highscores.display()
