@@ -520,11 +520,13 @@ def celebration_animation(result):
     sys.stdout.flush()
 
 
-def play_round(player, board, recorder=None):
+def play_round(player, board, recorder=None, commentary=None):
     print(f"\n{Color.BOLD}--- {player.name} ist dran (Runde {player.rounds + 1}) ---{Color.RESET}")
     print(f"    Verbleibend: {Color.info(f'{player.score} Punkte')}")
     if player.score <= 170 and not player.is_cpu:
         show_checkout_hint(player.score)
+        if commentary:
+            commentary.on_checkout_range(player.score)
 
     round_score = 0
     for dart in range(1, 4):
@@ -549,6 +551,8 @@ def play_round(player, board, recorder=None):
             player.stats.record_round(0)
             if recorder:
                 recorder.record_bust(player.name, result, points, player.score)
+            if commentary:
+                commentary.on_round_end(0, busted=True)
             return
 
         score_before = player.score - round_score
@@ -556,16 +560,22 @@ def play_round(player, board, recorder=None):
         player.darts_thrown += 1
         remaining_after = player.score - round_score
         print(f"    -> {Color.colorize_result(result, points)} | Runden-Summe: {Color.BOLD}{round_score}{Color.RESET}")
+        if commentary:
+            commentary.on_throw(result, points)
         if recorder:
             recorder.record_throw(player.name, result, points, score_before, remaining_after)
         if remaining_after <= 170 and remaining_after > 0 and not player.is_cpu and dart < 3:
             show_checkout_hint(remaining_after)
+        if commentary:
+            commentary.on_nine_darter_possible(player.darts_thrown, remaining_after)
 
     player.score -= round_score
     player.rounds += 1
     player.stats.record_round(round_score)
     if recorder:
         recorder.record_round_end(player.name, round_score, player.score)
+    if commentary:
+        commentary.on_round_end(round_score)
     print(f"    Neuer Stand: {Color.info(f'{player.score} Punkte')}")
 
 
@@ -650,7 +660,7 @@ def choose_game_mode():
         print("  Bitte 1, 2 oder 3 wählen.")
 
 
-def play_leg(players, board, start_score, leg_label="", recorder=None):
+def play_leg(players, board, start_score, leg_label="", recorder=None, commentary=None):
     for p in players:
         p.score = start_score
         p.darts_thrown = 0
@@ -662,14 +672,18 @@ def play_leg(players, board, start_score, leg_label="", recorder=None):
 
     while True:
         display_scoreboard(players)
+        if commentary and len(players) >= 2:
+            commentary.on_score_comparison({p.name: p.score for p in players})
         for player in players:
-            play_round(player, board, recorder=recorder)
+            play_round(player, board, recorder=recorder, commentary=commentary)
             if player.score == 0:
                 print(f"\n{Color.BOLD}{Color.YELLOW}{'*' * 40}")
                 print(f"  {player.name} gewinnt das Leg mit {player.darts_thrown} Darts!")
                 print(f"{'*' * 40}{Color.RESET}")
                 if recorder:
                     recorder.record_win(player.name, player.darts_thrown)
+                if commentary:
+                    commentary.on_finish(player.name, player.darts_thrown)
                 return player
 
 
@@ -799,8 +813,12 @@ def main():
     print("    7) Leaderboard (Elo-Rangliste)")
     print("    8) Highscores anzeigen")
     print("    9) Spieler-Profil anzeigen")
+    print("    0) Beenden")
     while True:
-        menu = input("  Wahl (1-9): ").strip()
+        menu = input("  Wahl (0-9): ").strip()
+        if menu == "0":
+            print(Color.info("\nDanke fürs Spielen! Bis zum nächsten Mal!"))
+            return
         if menu == "8":
             Highscores.display()
             input("\n  [Enter] zum Fortfahren...")
@@ -843,7 +861,7 @@ def main():
             return
         if menu == "1":
             break
-        print("  Bitte 1-9 wählen.")
+        print("  Bitte 0-9 wählen.")
 
     start_score = choose_game_mode()
     best_of = choose_tournament_mode()
@@ -853,6 +871,10 @@ def main():
 
     from profiles import ProfileManager
     from replay import ReplayRecorder
+    from commentary import Commentary
+
+    commentary_on = Commentary.toggle_prompt()
+    comm = Commentary(enabled=commentary_on)
 
     game_mode = f"Best of {best_of}" if best_of > 1 else "Einzelspiel"
     recorder = ReplayRecorder([p.name for p in players], game_mode, start_score)
@@ -860,7 +882,7 @@ def main():
 
     if best_of == 1:
         print(Color.success(f"\nSpiel startet! Modus: {start_score} - Ziel: Von {start_score} auf genau 0."))
-        winner = play_leg(players, board, start_score, recorder=recorder)
+        winner = play_leg(players, board, start_score, recorder=recorder, commentary=comm)
         if not winner.is_cpu:
             Highscores.add_entry(
                 winner.name,
@@ -878,7 +900,7 @@ def main():
         while not tournament_over:
             set_num += 1
             leg_label = f"Set {set_num} / Best of {best_of}"
-            winner = play_leg(players, board, start_score, leg_label, recorder=recorder)
+            winner = play_leg(players, board, start_score, leg_label, recorder=recorder, commentary=comm)
             set_wins[winner.name] += 1
             display_set_standings(set_wins, players, sets_to_win)
 
