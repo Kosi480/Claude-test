@@ -94,6 +94,8 @@ def run_penalty_shootout(p1_name, p2_name):
             print(f"\n  {Color.muted(f'{p2_name} kann nicht mehr aufholen.')}")
             for _ in range(remaining + 1):
                 p2_results.append(False)
+            for _ in range(remaining):
+                p1_results.append(False)
             break
 
         g2 = take_penalty(board, p2_name, r)
@@ -106,6 +108,8 @@ def run_penalty_shootout(p1_name, p2_name):
             print(f"\n  {Color.muted(f'{p1_name} kann nicht mehr aufholen.')}")
             for _ in range(remaining):
                 p1_results.append(False)
+            for _ in range(remaining):
+                p2_results.append(False)
             break
 
     if p1_goals == p2_goals:

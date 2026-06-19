@@ -91,8 +91,11 @@ def generate_daily_challenge(day_seed=None):
 
 def load_daily_progress():
     if os.path.exists(DAILY_FILE):
-        with open(DAILY_FILE, "r") as f:
-            return json.load(f)
+        try:
+            with open(DAILY_FILE, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return {}
     return {}
 
 

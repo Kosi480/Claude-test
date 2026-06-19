@@ -145,7 +145,7 @@ def play_classic_501(board, country):
     while score > 0 and darts < 50:
         round_score = 0
         for _ in range(3):
-            input(f"    [{score}] Dart [Enter]...")
+            input(f"    [{score - round_score}] Dart [Enter]...")
             throw_animation()
             result, points = board.throw()
             darts += 1

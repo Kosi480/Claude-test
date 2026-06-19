@@ -78,8 +78,7 @@ def display_maze(maze, px, py, exit_x, exit_y, fog=True):
             else:
                 mid += cell + " "
 
-        if y == 0:
-            print(top)
+        print(top)
         print(mid)
 
         if y == h - 1:
