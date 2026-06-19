@@ -794,26 +794,32 @@ def main():
     print("    2) Cricket-Modus")
     print("    3) Party-Minispiele (Killer, Shanghai)")
     print("    4) Training")
-    print("    5) Replays ansehen")
-    print("    6) Highscores anzeigen")
-    print("    7) Spieler-Profil anzeigen")
+    print("    5) Tägliche Challenge")
+    print("    6) Replays ansehen")
+    print("    7) Highscores anzeigen")
+    print("    8) Spieler-Profil anzeigen")
     while True:
-        menu = input("  Wahl (1-7): ").strip()
-        if menu == "6":
+        menu = input("  Wahl (1-8): ").strip()
+        if menu == "7":
             Highscores.display()
             input("\n  [Enter] zum Fortfahren...")
             continue
-        if menu == "7":
+        if menu == "8":
             from profiles import ProfileManager
             pname = input("  Spielername: ").strip()
             if pname:
                 ProfileManager.display_profile(pname)
             input("\n  [Enter] zum Fortfahren...")
             continue
-        if menu == "5":
+        if menu == "6":
             from replay import replay_menu
             replay_menu()
             continue
+        if menu == "5":
+            from daily import daily_menu
+            daily_menu()
+            print(Color.info("\nDanke fürs Spielen!"))
+            return
         if menu == "4":
             from training import training_menu
             training_menu()
@@ -832,7 +838,7 @@ def main():
             return
         if menu == "1":
             break
-        print("  Bitte 1-7 wählen.")
+        print("  Bitte 1-8 wählen.")
 
     start_score = choose_game_mode()
     best_of = choose_tournament_mode()
