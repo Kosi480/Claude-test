@@ -817,6 +817,7 @@ def main():
     print("    c) Custom Game (eigene Regeln)")
     print("    d) Sound-Demo")
     print("    t) Dart-Trivia-Quiz")
+    print("    h) Spielverlauf")
     print("    0) Beenden")
     while True:
         menu = input("  Wahl (0-9/s): ").strip().lower()
@@ -839,6 +840,10 @@ def main():
         if menu == "t":
             from trivia import trivia_menu
             trivia_menu()
+            continue
+        if menu == "h":
+            from match_history import history_menu
+            history_menu()
             continue
         if menu == "8":
             Highscores.display()
@@ -971,6 +976,27 @@ def main():
 
     replay_file = recorder.save()
     print(Color.muted(f"\n  Replay gespeichert: {replay_file}"))
+
+    from match_history import MatchHistory
+    player_data = []
+    for p in players:
+        pd = {
+            "name": p.name,
+            "darts": p.darts_thrown,
+            "is_cpu": p.is_cpu,
+            "avg_round": p.stats.average_per_round,
+            "bullseyes": p.stats.bullseyes,
+            "triples": p.stats.triples,
+            "highest_round": p.stats.highest_round,
+        }
+        player_data.append(pd)
+    MatchHistory.record_match(
+        match_type="Standard",
+        players=player_data,
+        winner_name=winner.name,
+        start_score=start_score,
+        game_mode=game_mode,
+    )
 
     print("\n" + Color.muted("=" * 40))
     print(Color.title(f"{'ENDSTATISTIKEN':^40}"))
