@@ -468,6 +468,46 @@ def display_scoreboard(players):
 ascii_board = AsciiDartBoard()
 
 
+def throw_animation():
+    frames = [
+        "    🎯  ·                        ",
+        "    🎯      ·                    ",
+        "    🎯          ·                ",
+        "    🎯              ·            ",
+        "    🎯                  ·        ",
+        "    🎯                      ·    ",
+        "    🎯                        ·  ",
+        "    🎯                         ✦ ",
+    ]
+    for frame in frames:
+        sys.stdout.write(f"\r{frame}")
+        sys.stdout.flush()
+        time.sleep(0.06)
+    sys.stdout.write("\r" + " " * 40 + "\r")
+    sys.stdout.flush()
+
+
+def celebration_animation(result):
+    if result == "Bullseye":
+        frames = ["  ★ BULLSEYE ★", "  ☆ BULLSEYE ☆", "  ★ BULLSEYE ★", "  ☆ BULLSEYE ☆"]
+        color = Color.YELLOW
+    elif result.startswith("Triple"):
+        frames = [f"  » {result} «", f"  « {result} »", f"  » {result} «"]
+        color = Color.RED
+    elif result == "Bull":
+        frames = [f"  > {result} <", f"  < {result} >", f"  > {result} <"]
+        color = Color.GREEN
+    else:
+        return
+
+    for frame in frames:
+        sys.stdout.write(f"\r{Color.BOLD}{color}{frame}{Color.RESET}")
+        sys.stdout.flush()
+        time.sleep(0.15)
+    sys.stdout.write("\r" + " " * 40 + "\r")
+    sys.stdout.flush()
+
+
 def play_round(player, board):
     print(f"\n{Color.BOLD}--- {player.name} ist dran (Runde {player.rounds + 1}) ---{Color.RESET}")
     print(f"    Verbleibend: {Color.info(f'{player.score} Punkte')}")
@@ -483,11 +523,13 @@ def play_round(player, board):
             result, points = player.cpu_throw()
         else:
             input(f"  Dart {dart}/3 - [Enter] zum Werfen...")
+            throw_animation()
             result, points = board.throw()
 
         player.stats.record_throw(result, points)
         if not player.is_cpu:
             print(ascii_board.render(result))
+            celebration_animation(result)
 
         if player.score - round_score - points < 0:
             print(f"    -> {Color.warning('BUST!')} {Color.colorize_result(result, points)} - Runde ungültig!")
