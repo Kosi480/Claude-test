@@ -2268,6 +2268,7 @@ class DartGameGUI:
                 else:
                     game_log.log(f"\nUNENTSCHIEDEN! Sudden Death!", "header")
                     round_num[0] = 5
+                    return
                 board_widget.canvas.unbind("<Button-1>")
 
             game_log.log(f"{current[0]} waehlt ein Ziel...", "info")
@@ -3284,7 +3285,11 @@ class DartGameGUI:
                 return
             alive = [n for n in state["order"] if state["players"][n]["alive"]]
             if len(alive) <= 1:
-                log.add(f"{alive[0]} GEWINNT KILLER!", "success")
+                if alive:
+                    log.add(f"{alive[0]} GEWINNT KILLER!", "success")
+                else:
+                    log.add("KILLER beendet - alle eliminiert!", "success")
+                state["started"] = False
                 return
             cur = alive[state["current_idx"] % len(alive)]
             p = state["players"][cur]
@@ -3880,6 +3885,7 @@ class DartGameGUI:
             "score": 0,
             "round": 1,
             "dart": 0,
+            "round_score": 0,
             "threshold": 15,
             "started": True,
         }
@@ -3910,12 +3916,13 @@ class DartGameGUI:
             if not state["started"]:
                 return
             state["score"] += points
+            state["round_score"] += points
             log.add(f"R{state['round']} D{state['dart']+1}: {result} ({points})", "hit" if points > 0 else "miss")
             state["dart"] += 1
             if state["dart"] >= 3:
-                round_total = points
+                round_total = state["round_score"]
                 if state["score"] < state["threshold"] * state["round"]:
-                    damage = max(5, state["threshold"] - points)
+                    damage = max(5, state["threshold"] - round_total)
                     state["hp"] -= damage
                     log.add(f"  Runde schwach! -{damage} HP", "warning")
                 else:
@@ -3924,6 +3931,7 @@ class DartGameGUI:
                     if heal > 0:
                         log.add(f"  Gute Runde! +{heal} HP", "success")
                 state["dart"] = 0
+                state["round_score"] = 0
                 state["round"] += 1
                 state["threshold"] = min(state["threshold"] + 2, 60)
                 if state["hp"] <= 0:
@@ -4258,7 +4266,10 @@ class DartGameGUI:
                 state["dart"] = 0
                 alive2 = [n for n in state["order"] if state["players"][n]["alive"]]
                 if len(alive2) <= 1:
-                    log.add(f"{alive2[0]} GEWINNT ASSASSIN!", "success")
+                    if alive2:
+                        log.add(f"{alive2[0]} GEWINNT ASSASSIN!", "success")
+                    else:
+                        log.add("ASSASSIN beendet - alle eliminiert!", "success")
                     state["started"] = False
                 else:
                     state["current_idx"] = (state["current_idx"] + 1) % len(alive2)

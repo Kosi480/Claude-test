@@ -90,7 +90,8 @@ def display_bingo_card(card):
                 desc_line += f"{Color.GREEN}{'  ✓ OK':<{cell_w}}{Color.RESET}|"
             else:
                 d = cell["desc"][:cell_w - 1]
-                desc_line += f" {Color.muted(d):<{cell_w + len(Color.muted('')) - len(d) + len(d) - 1}}|"
+                ansi_extra = len(Color.muted(''))
+                desc_line += f" {Color.muted(d):<{cell_w - 1 + ansi_extra}}|"
         print(f"    {desc_line}")
         print(f"    {border}")
 

@@ -90,12 +90,6 @@ def run_auction(player_names, num_rounds=10):
     print(Color.title(f"{'AUKTION ERGEBNIS':^50}"))
     print(f"{Color.muted('═' * 50)}")
 
-    for name in player_names:
-        for c in COLLECTIONS:
-            if all(s in owned[name] for s in c["segments"]):
-                if c["bonus"] not in [scores[name]]:
-                    pass
-
     sorted_players = sorted(scores.items(), key=lambda x: -x[1])
     for i, (name, score) in enumerate(sorted_players):
         medal = {0: "🥇", 1: "🥈", 2: "🥉"}.get(i, "  ")

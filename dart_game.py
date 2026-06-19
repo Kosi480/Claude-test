@@ -1049,7 +1049,8 @@ def main():
             if set_wins[winner.name] >= sets_to_win:
                 print(f"\n{Color.BOLD}{Color.YELLOW}{'*' * 44}")
                 print(f"  {winner.name} GEWINNT DAS TURNIER!")
-                print(f"  Sets: {set_wins[winner.name]}-{max(v for k, v in set_wins.items() if k != winner.name)}")
+                other_wins = [v for k, v in set_wins.items() if k != winner.name]
+                print(f"  Sets: {set_wins[winner.name]}-{max(other_wins) if other_wins else 0}")
                 print(f"{'*' * 44}{Color.RESET}")
                 if not winner.is_cpu:
                     Highscores.add_entry(

@@ -216,7 +216,7 @@ def endurance_menu():
 
             dc = input("  Wahl (1-4): ").strip()
             keys = list(DIFFICULTY_MODES.keys())
-            idx = int(dc) - 1 if dc in "1234" else 1
+            idx = int(dc) - 1 if dc in ("1", "2", "3", "4") else 1
             idx = max(0, min(len(keys) - 1, idx))
             diff = keys[idx]
 

@@ -245,7 +245,7 @@ def countdown_menu():
 
             mc = input("  Wahl (1-5): ").strip()
             keys = list(TIME_LIMITS.keys())
-            idx = int(mc) - 1 if mc in "12345" else 1
+            idx = int(mc) - 1 if mc in ("1", "2", "3", "4", "5") else 1
             idx = max(0, min(len(keys) - 1, idx))
 
             run_countdown(keys[idx])
@@ -271,7 +271,7 @@ def countdown_menu():
                 print(f"    {i}) {mode['label']}")
             mc = input("  Wahl (1-5): ").strip()
             keys = list(TIME_LIMITS.keys())
-            idx = int(mc) - 1 if mc in "12345" else 1
+            idx = int(mc) - 1 if mc in ("1", "2", "3", "4", "5") else 1
             idx = max(0, min(len(keys) - 1, idx))
 
             countdown_vs(names, keys[idx])

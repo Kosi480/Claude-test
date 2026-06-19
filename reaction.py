@@ -16,7 +16,7 @@ TARGETS = [
     {"label": "Triple 20", "match_num": 20, "match_type": "triple", "difficulty": 3},
     {"label": "Triple 19", "match_num": 19, "match_type": "triple", "difficulty": 3},
     {"label": "Bull", "match_num": 25, "match_type": "bull", "difficulty": 2},
-    {"label": "Bullseye", "match_num": 50, "match_type": "bullseye", "difficulty": 3},
+    {"label": "Bullseye", "match_num": 25, "match_type": "bullseye", "difficulty": 3},
 ]
 
 

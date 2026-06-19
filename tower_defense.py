@@ -236,7 +236,8 @@ def run_tower_defense():
         print(f"  {Color.GREEN}{Color.BOLD}Alle 20 Wellen überstanden!{Color.RESET}")
 
     print(f"{Color.muted('═' * 50)}")
-    print(f"  Wellen überlebt: {Color.BOLD}{wave}{Color.RESET}")
+    survived = wave - 1 if base_hp <= 0 else wave
+    print(f"  Wellen überlebt: {Color.BOLD}{survived}{Color.RESET}")
     print(f"  Feinde besiegt:  {Color.BOLD}{total_kills}{Color.RESET}")
     print(f"  Gold gesammelt:  {Color.YELLOW}{gold}{Color.RESET}")
     print(f"  Türme gebaut:    {Color.BOLD}{len(towers)}{Color.RESET}")

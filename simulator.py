@@ -256,7 +256,7 @@ def simulator_menu():
                 info = SKILL_LEVELS[key]
                 print(f"      {i}) {info['label']}")
             s1 = input("    Wahl (1-5): ").strip()
-            s1_idx = int(s1) - 1 if s1 in "12345" else 2
+            s1_idx = int(s1) - 1 if s1 in ("1", "2", "3", "4", "5") else 2
             spread1 = SKILL_LEVELS[SKILL_ORDER[s1_idx]]["spread"]
 
             print(f"\n  Spieler 2:")
@@ -266,7 +266,7 @@ def simulator_menu():
                 info = SKILL_LEVELS[key]
                 print(f"      {i}) {info['label']}")
             s2 = input("    Wahl (1-5): ").strip()
-            s2_idx = int(s2) - 1 if s2 in "12345" else 2
+            s2_idx = int(s2) - 1 if s2 in ("1", "2", "3", "4", "5") else 2
             spread2 = SKILL_LEVELS[SKILL_ORDER[s2_idx]]["spread"]
 
             try:

@@ -142,7 +142,10 @@ def play_challenge(board, players, challenge):
 
     display_scores = {}
     for p, s in scores.items():
-        display_scores[p] = -s if challenge["score"] == "min_points" else s
+        if challenge["score"] == "min_points":
+            display_scores[p] = 0 if s == -9999 else -s
+        else:
+            display_scores[p] = s
 
     sorted_players = sorted(scores.items(), key=lambda x: -x[1])
 

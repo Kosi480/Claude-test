@@ -132,12 +132,6 @@ def run_war(player_names):
     print(Color.title(f"{'DART WAR - ENDERGEBNIS':^50}"))
     print(f"{Color.muted('═' * 50)}")
 
-    for name in player_names:
-        terr_bonus = sum(
-            t["bonus"] for t in TERRITORIES if territory_owner[t["name"]] == name
-        )
-        scores[name] += terr_bonus
-
     sorted_players = sorted(scores.items(), key=lambda x: -x[1])
 
     for i, (name, score) in enumerate(sorted_players):
