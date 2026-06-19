@@ -176,7 +176,7 @@ def run_tower_defense():
 
             hit_enemy = None
             for e in alive_enemies:
-                if e["position"] == hit_num or result in ("Bullseye",):
+                if e["position"] == hit_num or result in ("Bullseye", "Bull"):
                     hit_enemy = e
                     break
 

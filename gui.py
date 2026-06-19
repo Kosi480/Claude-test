@@ -1703,7 +1703,7 @@ class DartGameGUI:
                     for w in action_frame.winfo_children():
                         w.destroy()
                     ttk.Button(action_frame, text="Hit (Ziehen)",
-                               command=lambda: None).pack(side=tk.LEFT, padx=5)
+                               command=sim).pack(side=tk.LEFT, padx=5)
                     ttk.Button(action_frame, text="Stand (Halten)",
                                command=stand).pack(side=tk.LEFT, padx=5)
                     game_log.log("\nHit = nochmal werfen | Stand = halten", "info")
@@ -2104,9 +2104,9 @@ class DartGameGUI:
                             bonus = wave_num[0] * 5
                             gold[0] += bonus
                             game_log.log(f"  Welle geschafft! +{bonus}G Bonus", "hit")
-                            next_wave()
                         else:
                             game_log.log(f"  {alive} Feinde übrig!", "warning")
+                        next_wave()
 
             update_display()
 
@@ -3512,21 +3512,18 @@ class DartGameGUI:
             total = sum(n for n in nums)
             bonus = 0
             hand_name = "Nichts"
+            if len(valid_nums) == 3 and sorted(valid_nums) == list(range(min(valid_nums), min(valid_nums)+3)):
+                hand_name = "Strasse"
+                bonus = 120
+            if pairs == 1 and not trips:
+                hand_name = "Ein Paar"
+                bonus = 30
+            if has_triple and has_double and not trips:
+                hand_name = "Full House"
+                bonus = 150
             if trips:
                 hand_name = "Drilling"
                 bonus = 100
-            elif pairs >= 2:
-                hand_name = "Zwei Paare"
-                bonus = 75
-            elif pairs == 1:
-                hand_name = "Ein Paar"
-                bonus = 30
-            if has_triple and has_double:
-                hand_name = "Full House"
-                bonus = 150
-            elif len(valid_nums) == 3 and sorted(valid_nums) == list(range(min(valid_nums), min(valid_nums)+3)):
-                hand_name = "Strasse"
-                bonus = 120
             return hand_name, total + bonus
 
         def update_display():
@@ -4195,6 +4192,8 @@ class DartGameGUI:
 
         def assign_targets():
             alive = [n for n in state["order"] if state["players"][n]["alive"]]
+            if len(alive) < 2:
+                return
             rnd.shuffle(alive)
             for i, n in enumerate(alive):
                 state["targets"][n] = alive[(i + 1) % len(alive)]
@@ -4278,8 +4277,8 @@ class DartGameGUI:
                         tp["shield"] = False
                         log.add(f"  {target_name}s Schild blockt Triple!", "warning")
                     else:
-                        tp["lives"] -= 2
-                        log.add(f"  Triple-Kill! {target_name} -2 Leben ({max(0,tp['lives'])})", "success")
+                        tp["lives"] = max(0, tp["lives"] - 2)
+                        log.add(f"  Triple-Kill! {target_name} -2 Leben ({tp['lives']})", "success")
                         if tp["lives"] <= 0:
                             tp["alive"] = False
                             log.add(f"  {target_name} ELIMINIERT!", "miss")
@@ -4325,7 +4324,8 @@ class DartGameGUI:
         btn_frame.pack(pady=5)
         log = GameLog(right)
         log.pack(fill=tk.BOTH, expand=True)
-        state = {"score": 501, "darts": 0, "round": 1, "dart_in_round": 0, "started": True}
+        state = {"score": 501, "darts": 0, "round": 1, "dart_in_round": 0, "started": True,
+                 "round_start_score": 501, "busted": False}
         info = tk.Frame(right, bg=COLORS["panel"])
         info.pack(fill=tk.X, pady=5)
         score_lbl = tk.Label(info, text="501", bg=COLORS["panel"], fg=COLORS["accent"],
@@ -4347,11 +4347,22 @@ class DartGameGUI:
         def on_throw(result, points):
             if not state["started"]:
                 return
+            if state["busted"]:
+                state["dart_in_round"] += 1
+                if state["dart_in_round"] >= 3:
+                    state["dart_in_round"] = 0
+                    state["round"] += 1
+                    state["busted"] = False
+                    state["round_start_score"] = state["score"]
+                update_display()
+                return
             hit_num, hit_type = parse_hit_number(result)
             new_score = state["score"] - points
             state["darts"] += 1
             if new_score < 0 or new_score == 1:
-                log.add(f"R{state['round']}: {result} ({points}) - BUST! Bleibt bei {state['score']}", "warning")
+                state["score"] = state["round_start_score"]
+                state["busted"] = True
+                log.add(f"R{state['round']}: {result} ({points}) - BUST! Zurueck auf {state['score']}", "warning")
             elif new_score == 0:
                 if hit_type == "double" or result == "Bullseye":
                     state["score"] = 0
@@ -4360,7 +4371,9 @@ class DartGameGUI:
                     log.add(f"Geschafft in {state['darts']} Darts!", "success")
                     score_lbl.config(text="0", fg=COLORS["green"])
                 else:
-                    log.add(f"R{state['round']}: {result} ({points}) - Brauche Double zum Auschecken!", "warning")
+                    state["score"] = state["round_start_score"]
+                    state["busted"] = True
+                    log.add(f"R{state['round']}: {result} ({points}) - Brauche Double! BUST!", "warning")
             else:
                 state["score"] = new_score
                 log.add(f"R{state['round']}: {result} ({points}) -> {state['score']}", "hit")
@@ -4368,6 +4381,8 @@ class DartGameGUI:
             if state["dart_in_round"] >= 3:
                 state["dart_in_round"] = 0
                 state["round"] += 1
+                state["busted"] = False
+                state["round_start_score"] = state["score"]
             update_display()
 
         board.on_throw = on_throw

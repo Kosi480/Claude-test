@@ -50,6 +50,7 @@ def play_hole(board, hole, player_name):
     print(f"  {'─' * 40}{Color.RESET}")
 
     darts = 0
+    hit = False
     while darts < MAX_DARTS_PER_HOLE:
         darts += 1
         input(f"    {player_name} - Dart {darts} [Enter]...")
