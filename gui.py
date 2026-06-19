@@ -657,6 +657,7 @@ class DartGameGUI:
         current_player = [p1]
         darts_left = [3]
         round_score = [0]
+        game_over = [False]
 
         score_panel = ScorePanel(right)
         score_panel.pack(fill=tk.X, pady=(0, 10))
@@ -674,6 +675,8 @@ class DartGameGUI:
         turn_label.pack(pady=5)
 
         def on_throw(result, points):
+            if game_over[0]:
+                return
             player = current_player[0]
             old_score = scores[player]
             new_score = old_score - points
@@ -690,6 +693,7 @@ class DartGameGUI:
                     score_panel.update_score(player, 0)
                     game_log.log(f"  {result} ({points}) - CHECKOUT!", "hit")
                     game_log.log(f"\n{player} GEWINNT!", "header")
+                    game_over[0] = True
                     board_widget.canvas.unbind("<Button-1>")
                     return
                 else:
@@ -766,6 +770,7 @@ class DartGameGUI:
         points = {p1: 0, p2: 0}
         current = [p1]
         darts_left = [3]
+        cricket_over = [False]
 
         cricket_frame = tk.Frame(right, bg=COLORS["card"])
         cricket_frame.pack(fill=tk.X, pady=5)
@@ -856,6 +861,8 @@ class DartGameGUI:
             return None
 
         def on_throw(result, pts):
+            if cricket_over[0]:
+                return
             player = current[0]
             other = p2 if player == p1 else p1
             num, count = parse_cricket_hit(result)
@@ -874,6 +881,7 @@ class DartGameGUI:
             winner = check_winner()
             if winner:
                 game_log.log(f"\n{winner} GEWINNT CRICKET!", "header")
+                cricket_over[0] = True
                 board_widget.canvas.unbind("<Button-1>")
                 return
 
@@ -1626,17 +1634,20 @@ class DartGameGUI:
         def dealer_draw():
             if game_state[0] != "dealer_turn":
                 return
-            d_total = calc_hand(dealer_hand)
-            if d_total >= 17:
-                resolve_round()
+            try:
+                d_total = calc_hand(dealer_hand)
+                if d_total >= 17:
+                    resolve_round()
+                    return
+                game_log.log("  Dealer zieht...", "info")
+                r, p = board_widget.simulate_throw()
+                v, l = dart_to_value(r, p)
+                dealer_hand.append((v, l))
+                game_log.log(f"  {r} = [{l}]", "hit")
+                update_display(hide_dealer=False)
+                self.root.after(800, dealer_draw)
+            except tk.TclError:
                 return
-            game_log.log("  Dealer zieht...", "info")
-            r, p = board_widget.simulate_throw()
-            v, l = dart_to_value(r, p)
-            dealer_hand.append((v, l))
-            game_log.log(f"  {r} = [{l}]", "hit")
-            update_display(hide_dealer=False)
-            self.root.after(800, dealer_draw)
 
         def resolve_round():
             p_total = calc_hand(player_hand)
@@ -2424,7 +2435,8 @@ class DartGameGUI:
                     game_log.log(f"  Antwort war: {seq_data[1]}", "miss")
                     next_puzzle()
 
-            update_puzzle()
+            if puzzle_num[0] <= puzzles_total:
+                update_puzzle()
 
         update_puzzle()
         game_log.log(f"Puzzle 1 - Los geht's!\n", "info")
@@ -2653,7 +2665,7 @@ class DartGameGUI:
             elif seg_text == "ZERO":
                 earned = 0
             elif seg_text == "SWAP":
-                earned = 20 - points if points < 20 else points
+                earned = (20 - points) if 0 < points < 20 else points
 
             score[0] += earned
             game_log.log(f"  {result} ({points}) + {seg_text} = +{earned}", "hit" if earned > 0 else "miss")
@@ -2916,7 +2928,8 @@ class DartGameGUI:
                     game_log.log(f"  Antwort war: {current[1]}", "miss")
                     next_problem()
 
-            update_info()
+            if problem_num[0] <= total_problems:
+                update_info()
 
         update_info()
         game_log.log(f"Aufgabe: {eq}\n", "info")
