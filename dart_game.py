@@ -741,10 +741,18 @@ def main():
     print("    1) Neues Spiel (501/301/701)")
     print("    2) Cricket-Modus")
     print("    3) Highscores anzeigen")
+    print("    4) Spieler-Profil anzeigen")
     while True:
-        menu = input("  Wahl (1-3): ").strip()
+        menu = input("  Wahl (1-4): ").strip()
         if menu == "3":
             Highscores.display()
+            input("\n  [Enter] zum Fortfahren...")
+            continue
+        if menu == "4":
+            from profiles import ProfileManager
+            pname = input("  Spielername: ").strip()
+            if pname:
+                ProfileManager.display_profile(pname)
             input("\n  [Enter] zum Fortfahren...")
             continue
         if menu == "2":
@@ -755,13 +763,17 @@ def main():
             return
         if menu == "1":
             break
-        print("  Bitte 1, 2 oder 3 wählen.")
+        print("  Bitte 1, 2, 3 oder 4 wählen.")
 
     start_score = choose_game_mode()
     best_of = choose_tournament_mode()
     players = setup_players(start_score=start_score)
     board = DartBoard()
     sets_to_win = (best_of // 2) + 1
+
+    from profiles import ProfileManager
+
+    has_hard_cpu = any(isinstance(p, CPUPlayer) and p.difficulty == "schwer" for p in players)
 
     if best_of == 1:
         print(Color.success(f"\nSpiel startet! Modus: {start_score} - Ziel: Von {start_score} auf genau 0."))
@@ -802,6 +814,24 @@ def main():
                 tournament_over = True
             else:
                 input(Color.info("\n  [Enter] für nächstes Set..."))
+
+    for player in players:
+        if not player.is_cpu:
+            is_winner = (player.score == 0) if best_of == 1 else (player.name == winner.name)
+            profile, xp_earned, leveled_up, unlocked = ProfileManager.update_after_game(
+                player.name,
+                player.stats,
+                won=is_winner,
+                busts=player.stats.busts,
+                darts=player.darts_thrown,
+                vs_hard_cpu=has_hard_cpu,
+                tournament_bo7=(best_of == 7),
+            )
+            print(f"\n  {Color.info(f'{player.name}:')} +{xp_earned} XP")
+            if leveled_up:
+                print(f"  {Color.BOLD}{Color.YELLOW}  LEVEL UP! Level {profile.level} - {profile.title}{Color.RESET}")
+            for title, desc in unlocked:
+                print(f"  {Color.BOLD}{Color.GREEN}  ★ Achievement: {title}{Color.RESET} - {desc}")
 
     print("\n" + Color.muted("=" * 40))
     print(Color.title(f"{'ENDSTATISTIKEN':^40}"))
