@@ -840,6 +840,7 @@ def main():
     print("    a) Achievement Gallery")
     print("    f) Penalty Shootout (1v1)")
     print("    m) Dart Memory")
+    print("    i) Treasure Hunt (Schatzsuche)")
     print("    e) Einstellungen")
     print("    ?) Hilfe & Tutorial")
     print("    0) Beenden")
@@ -937,6 +938,10 @@ def main():
         if menu == "m":
             from memory import memory_menu
             memory_menu()
+            continue
+        if menu == "i":
+            from treasure import treasure_menu
+            treasure_menu()
             continue
         if menu == "e":
             from settings import settings_menu
