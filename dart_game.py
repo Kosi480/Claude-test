@@ -550,8 +550,11 @@ def play_round(player, board, recorder=None, commentary=None):
             print(ascii_board.render(result))
             celebration_animation(result)
 
-        if player.score - round_score - points < 0:
+        new_remaining = player.score - round_score - points
+        if new_remaining < 0 or new_remaining == 1:
             print(f"    -> {Color.warning('BUST!')} {Color.colorize_result(result, points)} - Runde ungültig!")
+            player.darts_thrown += 1
+            player.rounds += 1
             player.stats.record_bust()
             player.stats.record_round(0)
             if recorder:
@@ -594,8 +597,11 @@ class Highscores:
     @staticmethod
     def load():
         if os.path.exists(HIGHSCORE_FILE):
-            with open(HIGHSCORE_FILE, "r") as f:
-                return json.load(f)
+            try:
+                with open(HIGHSCORE_FILE, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                return []
         return []
 
     @staticmethod

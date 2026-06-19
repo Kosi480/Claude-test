@@ -808,6 +808,38 @@ class TestLeagueRoundAdvance(unittest.TestCase):
         self.assertEqual(league["current_round"], 2)
 
 
+class TestScore1IsBust(unittest.TestCase):
+    def test_remaining_1_is_bust(self):
+        score = 21
+        round_score = 0
+        points = 20
+        new_remaining = score - round_score - points
+        self.assertEqual(new_remaining, 1)
+        is_bust = new_remaining < 0 or new_remaining == 1
+        self.assertTrue(is_bust, "Score of 1 should be a bust")
+
+    def test_remaining_0_not_bust(self):
+        score = 20
+        round_score = 0
+        points = 20
+        new_remaining = score - round_score - points
+        self.assertEqual(new_remaining, 0)
+        is_bust = new_remaining < 0 or new_remaining == 1
+        self.assertFalse(is_bust)
+
+
+class TestBracketNoneVsNone(unittest.TestCase):
+    def test_none_vs_none_returns_none(self):
+        from bracket import play_bracket_match
+        result = play_bracket_match(None, None, 501, "mittel")
+        self.assertIsNone(result)
+
+    def test_none_vs_player_returns_player(self):
+        from bracket import play_bracket_match
+        result = play_bracket_match(None, "Alice", 501, "mittel")
+        self.assertEqual(result, "Alice")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("  TIEFE SPIELTESTS - Umfassende Edge Cases")

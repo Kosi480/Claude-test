@@ -22,10 +22,13 @@ def create_bracket(player_names, seeded=True):
         random.shuffle(player_names)
 
     size = len(player_names)
-    if size not in (4, 8):
-        while len(player_names) < 8:
-            player_names.append(None)
+    if size > 8:
+        player_names = player_names[:8]
         size = 8
+    elif size not in (4, 8):
+        while len(player_names) < (4 if size <= 4 else 8):
+            player_names.append(None)
+        size = len(player_names)
 
     rounds_needed = 0
     s = size
@@ -93,6 +96,8 @@ def display_bracket(bracket):
 
 
 def play_bracket_match(p1_name, p2_name, start_score, skill):
+    if p1_name is None and p2_name is None:
+        return None
     if p1_name is None:
         return p2_name
     if p2_name is None:
