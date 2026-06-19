@@ -40,6 +40,7 @@ def sim_leg(p1, p2, board, start_score=501):
 
                 if player.score - round_score - points < 0:
                     player.stats.record_bust()
+                    player.darts_thrown += 1
                     round_score = 0
                     break
 

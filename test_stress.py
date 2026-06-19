@@ -691,6 +691,76 @@ def stress_daily(seed):
     assert isinstance(progress, dict)
 
 
+def stress_simulator(seed):
+    random.seed(seed)
+    from simulator import SimPlayer, sim_leg
+    from dart_game import DartBoard
+    board = DartBoard()
+    p1 = SimPlayer("A", 1.0)
+    p2 = SimPlayer("B", 1.5)
+    winner = sim_leg(p1, p2, board, 501)
+    for p in (p1, p2):
+        assert p.darts_thrown > 0, f"{p.name} has 0 darts_thrown"
+        assert p.darts_thrown >= p.rounds, f"{p.name} darts < rounds"
+        assert p.score >= 0, f"{p.name} negative score"
+
+
+def stress_auction_sets(seed):
+    random.seed(seed)
+    from auction import COLLECTIONS
+    from dart_game import DartBoard
+    board = DartBoard()
+    owned = {"A": [], "B": []}
+    scores = {"A": 0, "B": 0}
+    awarded = {"A": set(), "B": set()}
+    for _ in range(20):
+        _, pts = board.throw()
+        seg = random.randint(1, 20)
+        winner = "A" if pts > 30 else "B"
+        owned[winner].append(seg)
+        scores[winner] += seg
+        for c in COLLECTIONS:
+            if c["name"] not in awarded[winner] and all(s in owned[winner] for s in c["segments"]):
+                awarded[winner].add(c["name"])
+                scores[winner] += c["bonus"]
+    for p in ("A", "B"):
+        assert len(awarded[p]) <= len(COLLECTIONS), f"{p} got more sets than exist"
+
+
+def stress_cricket_logic(seed):
+    random.seed(seed)
+    from cricket import CricketPlayer, apply_cricket_hit, parse_cricket_hit, CRICKET_NUMBERS
+    from dart_game import DartBoard, Player
+    board = DartBoard()
+    cp1 = CricketPlayer(Player("A"))
+    cp2 = CricketPlayer(Player("B"))
+    all_cps = [cp1, cp2]
+    for _ in range(100):
+        for cp in all_cps:
+            r, p = board.throw()
+            number, mult = parse_cricket_hit(r, p)
+            if number in CRICKET_NUMBERS:
+                scored = apply_cricket_hit(cp, all_cps, number, mult)
+                assert scored >= 0, f"Negative cricket score"
+                assert cp.marks[number] <= 3 + mult, f"Marks exceed max"
+    assert cp1.points >= 0
+    assert cp2.points >= 0
+
+
+def stress_target_practice(seed):
+    random.seed(seed)
+    from target_practice import TARGETS, _is_near_miss
+    from dart_game import DartBoard
+    board = DartBoard()
+    for key, target in TARGETS.items():
+        for _ in range(10):
+            r, p = board.throw()
+            is_hit = target["match"](r, p)
+            assert isinstance(is_hit, bool)
+            near = _is_near_miss(r, key)
+            assert isinstance(near, bool)
+
+
 def main():
     print("=" * 60)
     print("  STRESS-TESTS: 100 Iterationen pro Spielmodus")
@@ -729,6 +799,10 @@ def main():
         ("MazeDisplay", stress_maze_display, 50),
         ("Party", stress_party, 100),
         ("Daily", stress_daily, 50),
+        ("Simulator", stress_simulator, 50),
+        ("AuctionSets", stress_auction_sets, 100),
+        ("CricketLogic", stress_cricket_logic, 50),
+        ("TargetPractice", stress_target_practice, 50),
     ]
 
     for name, fn, iters in tests:

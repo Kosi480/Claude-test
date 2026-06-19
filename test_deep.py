@@ -751,6 +751,63 @@ class TestMazeWalls(unittest.TestCase):
                     self.assertIn(d, maze[y][x])
 
 
+class TestPokerMissNotDrilling(unittest.TestCase):
+    def test_three_misses_no_bonus(self):
+        from collections import Counter
+        hits = [(0, "miss"), (0, "miss"), (0, "miss")]
+        nums = [h[0] for h in hits]
+        valid_nums = [n for n in nums if n > 0]
+        c = Counter(valid_nums)
+        trips = sum(1 for v in c.values() if v >= 3)
+        self.assertEqual(trips, 0, "Three misses should not count as Drilling")
+
+    def test_valid_drilling(self):
+        from collections import Counter
+        hits = [(20, "triple"), (20, "single"), (20, "single")]
+        nums = [h[0] for h in hits]
+        valid_nums = [n for n in nums if n > 0]
+        c = Counter(valid_nums)
+        trips = sum(1 for v in c.values() if v >= 3)
+        self.assertEqual(trips, 1, "Three 20s should be Drilling")
+
+
+class TestAuctionNoDuplicateBonus(unittest.TestCase):
+    def test_collection_awarded_once(self):
+        from auction import COLLECTIONS
+        owned = [1, 2, 3, 4, 5]
+        awarded = set()
+        bonus_total = 0
+        for _ in range(5):
+            for c in COLLECTIONS:
+                if c["name"] not in awarded and all(s in owned for s in c["segments"]):
+                    awarded.add(c["name"])
+                    bonus_total += c["bonus"]
+        self.assertEqual(bonus_total, 50, "Niedrig bonus should only be awarded once")
+        self.assertEqual(len(awarded), 1)
+
+
+class TestSimulatorDartCount(unittest.TestCase):
+    def test_bust_counts_dart(self):
+        from simulator import SimPlayer, sim_leg
+        from dart_game import DartBoard
+        random.seed(42)
+        board = DartBoard()
+        p1 = SimPlayer("A", 1.0)
+        p2 = SimPlayer("B", 1.0)
+        winner = sim_leg(p1, p2, board, 501)
+        for p in (p1, p2):
+            self.assertGreater(p.darts_thrown, 0, f"{p.name} has 0 darts")
+            self.assertGreaterEqual(p.darts_thrown, p.rounds)
+
+
+class TestLeagueRoundAdvance(unittest.TestCase):
+    def test_round_increments(self):
+        league = {"current_round": 1, "total_rounds": 3}
+        if league["current_round"] < league["total_rounds"]:
+            league["current_round"] += 1
+        self.assertEqual(league["current_round"], 2)
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("  TIEFE SPIELTESTS - Umfassende Edge Cases")

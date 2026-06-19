@@ -29,6 +29,7 @@ def run_auction(player_names, num_rounds=10):
     budgets = {name: 500 for name in player_names}
     owned = {name: [] for name in player_names}
     scores = {name: 0 for name in player_names}
+    awarded_sets = {name: set() for name in player_names}
 
     available = list(range(1, 21))
     random.shuffle(available)
@@ -81,7 +82,8 @@ def run_auction(player_names, num_rounds=10):
               f"fuer {win_bid} Credits!{Color.RESET}")
 
         for c in COLLECTIONS:
-            if all(s in owned[winner] for s in c["segments"]):
+            if c["name"] not in awarded_sets[winner] and all(s in owned[winner] for s in c["segments"]):
+                awarded_sets[winner].add(c["name"])
                 scores[winner] += c["bonus"]
                 print(f"  {Color.YELLOW}{Color.BOLD}SET KOMPLETT: {c['name']}! "
                       f"+{c['bonus']} Bonus!{Color.RESET}")

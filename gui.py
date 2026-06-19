@@ -1137,8 +1137,13 @@ class DartGameGUI:
                     state[0] = "waiting"
 
                     def hide_both():
-                        hide_card(f)
-                        hide_card(s)
+                        if state[0] != "waiting":
+                            return
+                        try:
+                            hide_card(f)
+                            hide_card(s)
+                        except Exception:
+                            return
                         mem_board[f]["revealed"] = False
                         mem_board[s]["revealed"] = False
                         state[0] = "picking_first"
@@ -1619,6 +1624,8 @@ class DartGameGUI:
             dealer_draw()
 
         def dealer_draw():
+            if game_state[0] != "dealer_turn":
+                return
             d_total = calc_hand(dealer_hand)
             if d_total >= 17:
                 resolve_round()
@@ -2097,7 +2104,9 @@ class DartGameGUI:
                             bonus = wave_num[0] * 5
                             gold[0] += bonus
                             game_log.log(f"  Welle geschafft! +{bonus}G Bonus", "hit")
-                        next_wave()
+                            next_wave()
+                        else:
+                            game_log.log(f"  {alive} Feinde übrig!", "warning")
 
             update_display()
 
@@ -3494,7 +3503,8 @@ class DartGameGUI:
             from collections import Counter
             nums = [h[0] for h in hits]
             types = [h[1] for h in hits]
-            c = Counter(nums)
+            valid_nums = [n for n in nums if n > 0]
+            c = Counter(valid_nums)
             pairs = sum(1 for v in c.values() if v >= 2)
             trips = sum(1 for v in c.values() if v >= 3)
             has_triple = "triple" in types
@@ -3514,7 +3524,7 @@ class DartGameGUI:
             if has_triple and has_double:
                 hand_name = "Full House"
                 bonus = 150
-            elif sorted(nums) == list(range(min(nums), min(nums)+3)) and len(nums) == 3:
+            elif len(valid_nums) == 3 and sorted(valid_nums) == list(range(min(valid_nums), min(valid_nums)+3)):
                 hand_name = "Strasse"
                 bonus = 120
             return hand_name, total + bonus
