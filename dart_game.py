@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Ein interaktives Dart-Spiel für die Kommandozeile."""
 
+import json
+import os
 import random
 import sys
 import time
+from datetime import datetime
 
 
 class DartBoard:
@@ -203,7 +206,53 @@ def play_round(player, board):
     print(f"    Neuer Stand: {player.score} Punkte")
 
 
+HIGHSCORE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "highscores.json")
 CPU_NAMES = ["Robo-Phil", "DartBot 3000", "KI-Taylor", "CyberBull"]
+
+
+class Highscores:
+    MAX_ENTRIES = 10
+
+    @staticmethod
+    def load():
+        if os.path.exists(HIGHSCORE_FILE):
+            with open(HIGHSCORE_FILE, "r") as f:
+                return json.load(f)
+        return []
+
+    @staticmethod
+    def save(entries):
+        with open(HIGHSCORE_FILE, "w") as f:
+            json.dump(entries, f, indent=2, ensure_ascii=False)
+
+    @classmethod
+    def add_entry(cls, name, darts, avg_round, date=None):
+        entries = cls.load()
+        entries.append({
+            "name": name,
+            "darts": darts,
+            "avg_round": round(avg_round, 1),
+            "date": date or datetime.now().strftime("%Y-%m-%d %H:%M"),
+        })
+        entries.sort(key=lambda e: e["darts"])
+        entries = entries[:cls.MAX_ENTRIES]
+        cls.save(entries)
+        return entries
+
+    @classmethod
+    def display(cls):
+        entries = cls.load()
+        print(f"\n{'=' * 50}")
+        print(f"{'HIGHSCORES - Top 10':^50}")
+        print(f"{'=' * 50}")
+        if not entries:
+            print("  Noch keine Einträge vorhanden.")
+        else:
+            print(f"  {'#':<4} {'Name':<18} {'Darts':>6} {'Avg/Rnd':>8} {'Datum':>12}")
+            print(f"  {'─' * 46}")
+            for i, e in enumerate(entries, 1):
+                print(f"  {i:<4} {e['name']:<18} {e['darts']:>6} {e['avg_round']:>8.1f} {e['date']:>12}")
+        print(f"{'=' * 50}")
 
 
 def choose_difficulty():
@@ -226,6 +275,20 @@ def main():
     print("=" * 40)
     print(f"{'DART SPIEL - 501':^40}")
     print("=" * 40)
+
+    print("\n  Hauptmenü:")
+    print("    1) Neues Spiel")
+    print("    2) Highscores anzeigen")
+    while True:
+        menu = input("  Wahl (1-2): ").strip()
+        if menu == "2":
+            Highscores.display()
+            input("\n  [Enter] zum Fortfahren...")
+        if menu in ("1", "2"):
+            if menu == "1":
+                break
+            continue
+        print("  Bitte 1 oder 2 wählen.")
 
     print("\n  Spielmodus:")
     print("    1) Nur Menschen")
@@ -286,6 +349,13 @@ def main():
                 print(f"\n{'*' * 40}")
                 print(f"  {player.name} GEWINNT mit {player.darts_thrown} Darts!")
                 print(f"{'*' * 40}")
+                if not player.is_cpu:
+                    Highscores.add_entry(
+                        player.name,
+                        player.darts_thrown,
+                        player.stats.average_per_round,
+                    )
+                    print("  Ergebnis in Highscores gespeichert!")
                 game_over = True
                 break
 
