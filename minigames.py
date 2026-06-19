@@ -218,11 +218,12 @@ def minigames_menu():
     print("    4) Dart Roulette (2-6 Spieler)")
     print("    5) Dart Golf (1-4 Spieler)")
     print("    6) Dart Poker (2-6 Spieler)")
-    print("    7) Zurück")
+    print("    7) Math Darts (Kopfrechnen)")
+    print("    8) Zurück")
 
     while True:
-        choice = input("  Wahl (1-7): ").strip()
-        if choice == "7":
+        choice = input("  Wahl (1-8): ").strip()
+        if choice == "8":
             return
 
         if choice == "3":
@@ -243,6 +244,11 @@ def minigames_menu():
         if choice == "6":
             from poker import poker_menu
             poker_menu()
+            return
+
+        if choice == "7":
+            from math_darts import math_darts_menu
+            math_darts_menu()
             return
 
         if choice in ("1", "2"):
@@ -270,4 +276,4 @@ def minigames_menu():
                 shanghai_game(names)
             return
 
-        print("  Bitte 1-7 wählen.")
+        print("  Bitte 1-8 wählen.")
