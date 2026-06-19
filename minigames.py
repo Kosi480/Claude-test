@@ -222,10 +222,12 @@ def minigames_menu():
     print("    8) Lucky Number (Glückszahl)")
     print("    9) Dart Blackjack (1-4 Spieler)")
     print("    w) Dart War (2-4 Spieler)")
+    print("    s) Dart Slots (1 Spieler)")
+    print("    a) Dart Auction (2-4 Spieler)")
     print("    0) Zurück")
 
     while True:
-        choice = input("  Wahl (0-9/w): ").strip().lower()
+        choice = input("  Wahl (0-9/w/s/a): ").strip().lower()
         if choice == "0":
             return
 
@@ -269,6 +271,16 @@ def minigames_menu():
             war_menu()
             return
 
+        if choice == "s":
+            from slots import slots_menu
+            slots_menu()
+            return
+
+        if choice == "a":
+            from auction import auction_menu
+            auction_menu()
+            return
+
         if choice in ("1", "2"):
             num = 0
             min_p = 2
@@ -294,4 +306,4 @@ def minigames_menu():
                 shanghai_game(names)
             return
 
-        print("  Bitte 0-9/w wählen.")
+        print("  Bitte 0-9/w/s/a wählen.")

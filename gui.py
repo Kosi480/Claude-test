@@ -435,6 +435,10 @@ class DartGameGUI:
              self.show_gui_war),
             ("Dart Assassin", "Geheime Ziele", COLORS["accent2"],
              self.show_gui_assassin),
+            ("Dart Slots", "Spielautomat", COLORS["yellow"],
+             self.show_gui_slots),
+            ("Dart Auction", "Biete auf Segmente", COLORS["green"],
+             self.show_gui_auction),
         ]
 
         for text, desc, color, cmd in games:
@@ -4568,6 +4572,218 @@ class DartGameGUI:
             elif state["hp2"] <= 0:
                 state["started"] = False
                 log.add(f"{state['p1']} GEWINNT DAS DUELL!", "success")
+            update_display()
+
+        board.on_hit = on_throw
+
+        def sim():
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+
+    def show_gui_slots(self):
+        self.clear_frame()
+        self._make_header("DART SLOTS")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        symbols = ["Kirsche", "Zitrone", "Glocke", "Stern", "Diamant", "Sieben"]
+        sym_icons = ["*", "O", "#", "+", "<>", "7"]
+        state = {
+            "credits": 100, "reels": [0, 0, 0], "reel_idx": 0,
+            "spinning": False, "spins": 0, "max_credits": 100,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        reel_lbl = tk.Label(info, text="[ ? ] [ ? ] [ ? ]", bg=COLORS["panel"],
+                            fg=COLORS["accent"], font=("Courier", 20, "bold"))
+        reel_lbl.pack(pady=10)
+        credit_lbl = tk.Label(info, text="Credits: 100", bg=COLORS["panel"],
+                              fg=COLORS["text"], font=("Courier", 14))
+        credit_lbl.pack(pady=5)
+
+        def update_reels():
+            parts = []
+            for i in range(3):
+                if state["spinning"] and i >= state["reel_idx"]:
+                    parts.append("[ ? ]")
+                else:
+                    parts.append(f"[{sym_icons[state['reels'][i]]:^3}]")
+            reel_lbl.config(text=" ".join(parts))
+            credit_lbl.config(text=f"Credits: {state['credits']} | Spins: {state['spins']}")
+
+        def start_spin():
+            if state["credits"] < 10:
+                log.add("Nicht genug Credits!", "miss")
+                return
+            state["credits"] -= 10
+            state["spinning"] = True
+            state["reel_idx"] = 0
+            state["spins"] += 1
+            log.add(f"Spin #{state['spins']}! Wirf 3 Darts...", "info")
+            update_reels()
+
+        def on_throw(result, points):
+            if not state["spinning"]:
+                return
+            hit_num, hit_type = parse_hit_number(result)
+            idx = hit_num % len(symbols) if hit_num > 0 else 0
+            if hit_type == "triple":
+                idx = 5
+            elif hit_type == "double":
+                idx = min(idx + 1, 5)
+            state["reels"][state["reel_idx"]] = idx
+            log.add(f"  Walze {state['reel_idx']+1}: {result} -> {symbols[idx]}", "hit")
+            state["reel_idx"] += 1
+            if state["reel_idx"] >= 3:
+                state["spinning"] = False
+                r = state["reels"]
+                payout = 0
+                name = "Nichts"
+                if r[0] == r[1] == r[2]:
+                    payouts = [10, 15, 30, 75, 200, 500]
+                    payout = payouts[r[0]]
+                    name = f"3x {symbols[r[0]]}!"
+                elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
+                    payout = 5
+                    name = "Ein Paar"
+                if payout > 0:
+                    state["credits"] += payout
+                    log.add(f"  {name} = +{payout} Credits!", "success")
+                else:
+                    log.add(f"  {name}", "miss")
+                state["max_credits"] = max(state["max_credits"], state["credits"])
+                if state["credits"] < 10:
+                    log.add(f"Game Over! Max Credits: {state['max_credits']}", "warning")
+            update_reels()
+
+        board.on_hit = on_throw
+
+        def sim():
+            if not state["spinning"]:
+                start_spin()
+            r, p = board.simulate_throw()
+            on_throw(r, p)
+
+        ttk.Button(btn_frame, text="Drehen (10 Cr)", command=lambda: start_spin() if not state["spinning"] else None).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Zufallswurf", command=sim).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Beenden", command=self.show_main_menu).pack(side=tk.LEFT, padx=5)
+        log.add("Dart Slots! 10 Credits pro Spin.", "info")
+        log.add("Triple = Sieben (Jackpot!)", "info")
+        update_reels()
+
+    def show_gui_auction(self):
+        self.clear_frame()
+        self._make_header("DART AUCTION")
+        content = tk.Frame(self.current_frame, bg=COLORS["bg"])
+        content.pack(fill=tk.BOTH, expand=True)
+        left = tk.Frame(content, bg=COLORS["bg"])
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        right = tk.Frame(content, bg=COLORS["bg"])
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        board = DartBoardCanvas(left, size=340)
+        board.pack(pady=5)
+        btn_frame = tk.Frame(left, bg=COLORS["bg"])
+        btn_frame.pack(pady=5)
+        log = GameLog(right)
+        log.pack(fill=tk.BOTH, expand=True)
+        import random as rnd
+        state = {
+            "players": [], "budgets": {}, "owned": {}, "scores": {},
+            "segments": [], "seg_idx": 0, "current_bidder": 0,
+            "bids": {}, "started": False,
+        }
+        info = tk.Frame(right, bg=COLORS["panel"])
+        info.pack(fill=tk.X, pady=5)
+        status_lbl = tk.Label(info, text="", bg=COLORS["panel"], fg=COLORS["text"],
+                              font=("Courier", 11), justify=tk.LEFT, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=5)
+
+        def update_display():
+            lines = []
+            if state["seg_idx"] < len(state["segments"]):
+                seg = state["segments"][state["seg_idx"]]
+                lines.append(f"  Auktion: Segment {seg} (Runde {state['seg_idx']+1}/{len(state['segments'])})")
+            for n in state["players"]:
+                segs = sorted(state["owned"].get(n, []))
+                seg_str = ",".join(str(s) for s in segs) if segs else "-"
+                lines.append(f"  {n}: {state['budgets'].get(n,0)} Cr | {seg_str}")
+            if state["started"] and state["current_bidder"] < len(state["players"]):
+                lines.append(f"\n  Bieter: {state['players'][state['current_bidder']]}")
+            status_lbl.config(text="\n".join(lines))
+
+        def start_game():
+            names = name_entry.get().strip()
+            if not names:
+                names = "Spieler 1,Spieler 2"
+            plist = [n.strip() for n in names.split(",") if n.strip()]
+            if len(plist) < 2:
+                plist = ["Spieler 1", "Spieler 2"]
+            state["players"] = plist
+            state["budgets"] = {n: 500 for n in plist}
+            state["owned"] = {n: [] for n in plist}
+            state["scores"] = {n: 0 for n in plist}
+            segs = list(range(1, 21))
+            rnd.shuffle(segs)
+            state["segments"] = segs[:10]
+            state["seg_idx"] = 0
+            state["current_bidder"] = 0
+            state["bids"] = {}
+            state["started"] = True
+            log.clear()
+            log.add("Auktion gestartet! Biete auf Segmente.", "info")
+            setup_frame.pack_forget()
+            update_display()
+
+        setup_frame = tk.Frame(right, bg=COLORS["panel"])
+        setup_frame.pack(fill=tk.X, pady=5)
+        tk.Label(setup_frame, text="Spieler (kommagetrennt):", bg=COLORS["panel"],
+                 fg=COLORS["text"]).pack(pady=2)
+        name_entry = tk.Entry(setup_frame, width=30)
+        name_entry.insert(0, "Alice,Bob")
+        name_entry.pack(pady=2)
+        ttk.Button(setup_frame, text="Auktion starten", command=start_game).pack(pady=5)
+
+        def on_throw(result, points):
+            if not state["started"]:
+                return
+            if state["seg_idx"] >= len(state["segments"]):
+                return
+            cur = state["players"][state["current_bidder"]]
+            bid = min(points, state["budgets"][cur])
+            if result == "Bullseye":
+                bid = min(bid * 2, state["budgets"][cur])
+            state["bids"][cur] = bid
+            log.add(f"{cur} bietet {bid} (Wurf: {result})", "hit")
+            state["current_bidder"] += 1
+            if state["current_bidder"] >= len(state["players"]):
+                seg = state["segments"][state["seg_idx"]]
+                winner = max(state["bids"], key=state["bids"].get)
+                win_bid = state["bids"][winner]
+                state["budgets"][winner] -= win_bid
+                state["owned"][winner].append(seg)
+                state["scores"][winner] += seg
+                log.add(f"  {winner} gewinnt Segment {seg} fuer {win_bid}!", "success")
+                state["seg_idx"] += 1
+                state["current_bidder"] = 0
+                state["bids"] = {}
+                if state["seg_idx"] >= len(state["segments"]):
+                    state["started"] = False
+                    winner_final = max(state["scores"], key=state["scores"].get)
+                    log.add(f"AUKTION VORBEI! {winner_final} gewinnt!", "success")
+                    for n in state["players"]:
+                        log.add(f"  {n}: {state['scores'][n]} Punkte", "info")
             update_display()
 
         board.on_hit = on_throw
