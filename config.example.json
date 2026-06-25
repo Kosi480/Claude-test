@@ -1,0 +1,6 @@
+{
+  "token": "DEIN_BOT_TOKEN_HIER",
+  "prefix": "!",
+  "currency": "Coins",
+  "currencySymbol": "$"
+}
