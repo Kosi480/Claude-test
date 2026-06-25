@@ -12,7 +12,8 @@ db.exec(`
     bank INTEGER DEFAULT 0,
     last_work TEXT,
     last_steal TEXT,
-    last_daily TEXT
+    last_daily TEXT,
+    last_weekly TEXT
   );
 
   CREATE TABLE IF NOT EXISTS inventory (
@@ -30,6 +31,8 @@ db.exec(`
     emoji TEXT DEFAULT '📦'
   );
 `);
+
+try { db.exec('ALTER TABLE users ADD COLUMN last_weekly TEXT'); } catch (_) {}
 
 const defaultItems = [
   { name: 'Angel', price: 100, description: 'Eine Angel zum Fischen', emoji: '🎣' },
@@ -104,6 +107,11 @@ function setLastDaily(userId) {
   db.prepare('UPDATE users SET last_daily = ? WHERE user_id = ?').run(new Date().toISOString(), userId);
 }
 
+function setLastWeekly(userId) {
+  getUser(userId);
+  db.prepare('UPDATE users SET last_weekly = ? WHERE user_id = ?').run(new Date().toISOString(), userId);
+}
+
 function getInventory(userId) {
   return db.prepare('SELECT * FROM inventory WHERE user_id = ?').all(userId);
 }
@@ -147,7 +155,7 @@ function getTopUsers(limit = 10) {
 
 module.exports = {
   db, getUser, updateBalance, setBalance, getBalance, getBank,
-  deposit, withdraw, setLastWork, setLastSteal, setLastDaily,
+  deposit, withdraw, setLastWork, setLastSteal, setLastDaily, setLastWeekly,
   getInventory, addToInventory, removeFromInventory, hasItem,
   getShopItems, getShopItem, getTopUsers,
 };
