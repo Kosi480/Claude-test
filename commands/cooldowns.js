@@ -1,12 +1,12 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 module.exports = {
-  name: 'cooldowns',
-  aliases: ['cd', 'timers', 'zeiten'],
-  description: 'Zeigt alle deine Cooldowns an',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('cooldowns')
+    .setDescription('Zeigt alle deine Cooldowns an'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const user = db.getUser(userId);
     const config = require('../config.json');
 
@@ -32,7 +32,7 @@ module.exports = {
       .setFooter({ text: 'Andere Cooldowns (Fish, Dig, Hunt etc.) laufen über den Arbeitsspeicher' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };
 

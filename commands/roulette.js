@@ -1,31 +1,30 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 
 module.exports = {
-  name: 'roulette',
-  aliases: ['rlt'],
-  description: 'Spiele Roulette (!roulette <Betrag> <rot/schwarz/gerade/ungerade/Zahl>)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('roulette')
+    .setDescription('Spiele Roulette')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true))
+    .addStringOption(opt => opt.setName('wette').setDescription('Wette: rot/schwarz/gerade/ungerade/0-36').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
-    if (args.length < 2) {
-      return message.reply(`❌ Nutzung: \`${config.prefix}roulette <Betrag> <rot/schwarz/gerade/ungerade/0-36>\``);
-    }
-
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Ungültiger Betrag!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
-    const bet = args[1].toLowerCase();
+    const bet = interaction.options.getString('wette').toLowerCase();
     const result = Math.floor(Math.random() * 37);
     const isRed = redNumbers.includes(result);
     const isBlack = result !== 0 && !isRed;
@@ -63,7 +62,7 @@ module.exports = {
       multiplier = 1;
       betDisplay = 'Ungerade';
     } else {
-      return message.reply('❌ Ungültige Wette! Optionen: `rot`, `schwarz`, `gerade`, `ungerade`, oder `0-36`');
+      return interaction.reply('❌ Ungültige Wette! Optionen: `rot`, `schwarz`, `gerade`, `ungerade`, oder `0-36`');
     }
 
     const winAmount = won ? amount * multiplier : -amount;
@@ -82,6 +81,6 @@ module.exports = {
       .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

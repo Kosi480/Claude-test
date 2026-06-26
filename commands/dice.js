@@ -1,25 +1,25 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 module.exports = {
-  name: 'dice',
-  aliases: ['würfel', 'roll'],
-  description: 'Würfle gegen den Bot (!dice <Betrag>)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('dice')
+    .setDescription('Würfle gegen den Bot')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}dice <Betrag>\``);
-
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Ungültiger Betrag!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
     const playerDice1 = Math.floor(Math.random() * 6) + 1;
     const playerDice2 = Math.floor(Math.random() * 6) + 1;
@@ -55,13 +55,13 @@ module.exports = {
       .setColor(color)
       .setTitle('🎲 Würfelspiel')
       .addFields(
-        { name: `${message.author.username}`, value: `${diceEmojis[playerDice1]} ${diceEmojis[playerDice2]} = **${playerTotal}**`, inline: true },
+        { name: `${interaction.user.username}`, value: `${diceEmojis[playerDice1]} ${diceEmojis[playerDice2]} = **${playerTotal}**`, inline: true },
         { name: 'Bot', value: `${diceEmojis[botDice1]} ${diceEmojis[botDice2]} = **${botTotal}**`, inline: true },
       )
       .setDescription(resultText)
       .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

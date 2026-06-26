@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const catches = [
@@ -28,21 +28,21 @@ const rarityColors = {
 };
 
 module.exports = {
-  name: 'fish',
-  aliases: ['fischen', 'angeln'],
-  description: 'Geh angeln (benötigt Angel)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('fish')
+    .setDescription('Geh angeln (benötigt Angel)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
     if (!db.hasItem(userId, 'Angel')) {
-      return message.reply(`❌ Du brauchst eine **Angel**! Kaufe eine im \`${config.prefix}shop\``);
+      return interaction.reply(`❌ Du brauchst eine **Angel**! Kaufe eine im \`/shop\``);
     }
 
     const lastFish = cooldowns.get(userId);
     if (lastFish && Date.now() - lastFish < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastFish)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
     cooldowns.set(userId, Date.now());
@@ -69,6 +69,6 @@ module.exports = {
       .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

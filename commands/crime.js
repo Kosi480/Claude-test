@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const crimes = [
@@ -14,17 +14,17 @@ const COOLDOWN = 120 * 1000;
 const cooldowns = new Map();
 
 module.exports = {
-  name: 'crime',
-  aliases: ['verbrechen', 'heist'],
-  description: 'Begehe ein Verbrechen — hohes Risiko, hohe Belohnung (2min Cooldown)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('crime')
+    .setDescription('Begehe ein Verbrechen — hohes Risiko, hohe Belohnung (2min Cooldown)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
     const lastCrime = cooldowns.get(userId);
     if (lastCrime && Date.now() - lastCrime < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastCrime)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten, bevor du wieder ein Verbrechen begehen kannst!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten, bevor du wieder ein Verbrechen begehen kannst!`);
     }
 
     cooldowns.set(userId, Date.now());
@@ -44,7 +44,7 @@ module.exports = {
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     } else {
       const balance = db.getBalance(userId);
       const actualFine = Math.min(crime.fine, balance);
@@ -57,7 +57,7 @@ module.exports = {
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     }
   },
 };

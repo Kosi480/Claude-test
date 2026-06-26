@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const COOLDOWN = 90 * 1000;
@@ -19,27 +19,28 @@ const failMessages = [
 ];
 
 module.exports = {
-  name: 'pickpocket',
-  aliases: ['taschendieb', 'klauen2'],
-  description: 'Beklaue einen Spieler heimlich (90s Cooldown, subtiler als !steal)',
-  execute(message, args) {
-    const target = message.mentions.users.first();
+  data: new SlashCommandBuilder()
+    .setName('pickpocket')
+    .setDescription('Beklaue einen Spieler heimlich (90s Cooldown, subtiler als /steal)')
+    .addUserOption(opt => opt.setName('user').setDescription('Der Spieler, den du beklauen willst').setRequired(true)),
+  async execute(interaction) {
+    const target = interaction.options.getUser('user');
     const config = require('../config.json');
-    const userId = message.author.id;
+    const userId = interaction.user.id;
 
-    if (!target) return message.reply('❌ Erwähne einen Spieler! `!pickpocket @user`');
-    if (target.id === userId) return message.reply('❌ Du kannst dich nicht selbst beklauen!');
-    if (target.bot) return message.reply('❌ Bots haben keine Taschen!');
+    if (!target) return await interaction.reply('❌ Erwähne einen Spieler! `/pickpocket @user`');
+    if (target.id === userId) return await interaction.reply('❌ Du kannst dich nicht selbst beklauen!');
+    if (target.bot) return await interaction.reply('❌ Bots haben keine Taschen!');
 
     const lastPP = cooldowns.get(userId);
     if (lastPP && Date.now() - lastPP < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastPP)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return await interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
     const targetUser = db.getUser(target.id);
     if (targetUser.balance < 5) {
-      return message.reply(`❌ **${target.username}** hat nicht genug Bargeld!`);
+      return await interaction.reply(`❌ **${target.username}** hat nicht genug Bargeld!`);
     }
 
     cooldowns.set(userId, Date.now());
@@ -51,7 +52,7 @@ module.exports = {
         .setTitle('🛡️ Geschützt!')
         .setDescription(`**${target.username}** hatte ein Schutzschild! Dein Taschendiebstahl wurde abgewehrt.`)
         .setTimestamp();
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
     const successChance = 0.5;
@@ -82,7 +83,7 @@ module.exports = {
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     } else {
       const fine = Math.floor(Math.random() * 50) + 25;
       const actualFine = Math.min(fine, db.getBalance(userId));
@@ -97,7 +98,7 @@ module.exports = {
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     }
   },
 };

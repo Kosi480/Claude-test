@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const suits = ['♠', '♥', '♦', '♣'];
@@ -44,26 +44,26 @@ function formatHand(hand, hideSecond = false) {
 const activeGames = new Map();
 
 module.exports = {
-  name: 'blackjack',
-  aliases: ['bj'],
-  description: 'Spiele Blackjack gegen den Dealer',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('blackjack')
+    .setDescription('Spiele Blackjack gegen den Dealer')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
-    if (activeGames.has(userId)) return message.reply('❌ Du hast bereits ein laufendes Spiel!');
+    if (activeGames.has(userId)) return interaction.reply('❌ Du hast bereits ein laufendes Spiel!');
 
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}blackjack <Betrag>\``);
-
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Bitte gib einen gültigen Betrag an!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Bitte gib einen gültigen Betrag an!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
     const deck = createDeck();
     const playerHand = [deck.pop(), deck.pop()];
@@ -81,7 +81,7 @@ module.exports = {
         .setTitle('🃏 BLACKJACK!')
         .setDescription(`Blackjack! Du gewinnst **${config.currencySymbol}${winAmount}**!`)
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` });
-      return message.reply({ embeds: [embed] });
+      return interaction.reply({ embeds: [embed] });
     }
 
     const row = new ActionRowBuilder().addComponents(
@@ -92,78 +92,77 @@ module.exports = {
     const embed = createEmbed(playerHand, dealerHand, true, config)
       .setFooter({ text: `Einsatz: ${config.currencySymbol}${amount}` });
 
-    message.reply({ embeds: [embed], components: [row] }).then(msg => {
-      const collector = msg.createMessageComponentCollector({ time: 60000 });
+    const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+    const collector = msg.createMessageComponentCollector({ time: 60000 });
 
-      collector.on('collect', (interaction) => {
-        if (interaction.user.id !== userId) {
-          return interaction.reply({ content: '❌ Das ist nicht dein Spiel!', flags: 64 });
-        }
+    collector.on('collect', (interaction) => {
+      if (interaction.user.id !== userId) {
+        return interaction.reply({ content: '❌ Das ist nicht dein Spiel!', flags: 64 });
+      }
 
-        const game = activeGames.get(userId);
-        if (!game) return;
+      const game = activeGames.get(userId);
+      if (!game) return;
 
-        if (interaction.customId === `bj_hit_${userId}`) {
-          game.playerHand.push(game.deck.pop());
-          const pValue = handValue(game.playerHand);
+      if (interaction.customId === `bj_hit_${userId}`) {
+        game.playerHand.push(game.deck.pop());
+        const pValue = handValue(game.playerHand);
 
-          if (pValue > 21) {
-            activeGames.delete(userId);
-            db.updateBalance(userId, -game.amount);
-            collector.stop();
-            const embed = createEmbed(game.playerHand, game.dealerHand, false, config)
-              .setColor('#e74c3c')
-              .setTitle('🃏 Bust!')
-              .setDescription(`Über 21! Du verlierst **${config.currencySymbol}${game.amount}**!`)
-              .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` });
-            return interaction.update({ embeds: [embed], components: [] });
-          }
-
-          const embed = createEmbed(game.playerHand, game.dealerHand, true, config)
-            .setFooter({ text: `Einsatz: ${config.currencySymbol}${game.amount} | Dein Wert: ${pValue}` });
-          interaction.update({ embeds: [embed], components: [row] });
-
-        } else if (interaction.customId === `bj_stand_${userId}`) {
+        if (pValue > 21) {
+          activeGames.delete(userId);
+          db.updateBalance(userId, -game.amount);
           collector.stop();
-          while (handValue(game.dealerHand) < 17) {
-            game.dealerHand.push(game.deck.pop());
-          }
-
-          const pValue = handValue(game.playerHand);
-          const dValue = handValue(game.dealerHand);
-          let resultText, color;
-
-          if (dValue > 21 || pValue > dValue) {
-            db.updateBalance(userId, game.amount);
-            resultText = `Du gewinnst! **+${config.currencySymbol}${game.amount}**`;
-            color = '#2ecc71';
-          } else if (pValue === dValue) {
-            resultText = 'Unentschieden! Einsatz zurück.';
-            color = '#f39c12';
-          } else {
-            db.updateBalance(userId, -game.amount);
-            resultText = `Dealer gewinnt! **-${config.currencySymbol}${game.amount}**`;
-            color = '#e74c3c';
-          }
-
-          activeGames.delete(userId);
-
           const embed = createEmbed(game.playerHand, game.dealerHand, false, config)
-            .setColor(color)
-            .setTitle('🃏 Blackjack — Ergebnis')
-            .setDescription(resultText)
+            .setColor('#e74c3c')
+            .setTitle('🃏 Bust!')
+            .setDescription(`Über 21! Du verlierst **${config.currencySymbol}${game.amount}**!`)
             .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` });
-          interaction.update({ embeds: [embed], components: [] });
+          return interaction.update({ embeds: [embed], components: [] });
         }
-      });
 
-      collector.on('end', (_, reason) => {
-        if (reason === 'time') {
-          activeGames.delete(userId);
-          db.updateBalance(userId, -activeGames.get(userId)?.amount || 0);
-          msg.edit({ components: [] });
+        const embed = createEmbed(game.playerHand, game.dealerHand, true, config)
+          .setFooter({ text: `Einsatz: ${config.currencySymbol}${game.amount} | Dein Wert: ${pValue}` });
+        interaction.update({ embeds: [embed], components: [row] });
+
+      } else if (interaction.customId === `bj_stand_${userId}`) {
+        collector.stop();
+        while (handValue(game.dealerHand) < 17) {
+          game.dealerHand.push(game.deck.pop());
         }
-      });
+
+        const pValue = handValue(game.playerHand);
+        const dValue = handValue(game.dealerHand);
+        let resultText, color;
+
+        if (dValue > 21 || pValue > dValue) {
+          db.updateBalance(userId, game.amount);
+          resultText = `Du gewinnst! **+${config.currencySymbol}${game.amount}**`;
+          color = '#2ecc71';
+        } else if (pValue === dValue) {
+          resultText = 'Unentschieden! Einsatz zurück.';
+          color = '#f39c12';
+        } else {
+          db.updateBalance(userId, -game.amount);
+          resultText = `Dealer gewinnt! **-${config.currencySymbol}${game.amount}**`;
+          color = '#e74c3c';
+        }
+
+        activeGames.delete(userId);
+
+        const embed = createEmbed(game.playerHand, game.dealerHand, false, config)
+          .setColor(color)
+          .setTitle('🃏 Blackjack — Ergebnis')
+          .setDescription(resultText)
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` });
+        interaction.update({ embeds: [embed], components: [] });
+      }
+    });
+
+    collector.on('end', (_, reason) => {
+      if (reason === 'time') {
+        activeGames.delete(userId);
+        db.updateBalance(userId, -activeGames.get(userId)?.amount || 0);
+        msg.edit({ components: [] });
+      }
     });
   },
 };

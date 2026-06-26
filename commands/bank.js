@@ -1,18 +1,36 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const BASE_BANK_LIMIT = 10000;
 const TRESOR_BONUS = 5000;
 
 module.exports = {
-  name: 'bank',
-  aliases: ['einzahlen', 'abheben'],
-  description: 'Einzahlen oder Abheben: !bank einzahlen/abheben <Betrag>',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('bank')
+    .setDescription('Verwalte dein Bankkonto')
+    .addSubcommand(sub =>
+      sub.setName('info')
+        .setDescription('Zeige deinen Kontostand und Bankstatus'))
+    .addSubcommand(sub =>
+      sub.setName('einzahlen')
+        .setDescription('Geld in die Bank einzahlen')
+        .addStringOption(opt =>
+          opt.setName('betrag')
+            .setDescription('Betrag zum Einzahlen (Zahl oder "all")')
+            .setRequired(true)))
+    .addSubcommand(sub =>
+      sub.setName('abheben')
+        .setDescription('Geld von der Bank abheben')
+        .addStringOption(opt =>
+          opt.setName('betrag')
+            .setDescription('Betrag zum Abheben (Zahl oder "all")')
+            .setRequired(true))),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
+    const sub = interaction.options.getSubcommand();
 
-    if (!args.length) {
+    if (sub === 'info') {
       const user = db.getUser(userId);
       const bankLimit = getBankLimit(userId);
       const embed = new EmbedBuilder()
@@ -22,26 +40,26 @@ module.exports = {
           { name: '👛 Bargeld', value: `${config.currencySymbol}${user.balance.toLocaleString()}`, inline: true },
           { name: '🏦 Bank', value: `${config.currencySymbol}${user.bank.toLocaleString()} / ${config.currencySymbol}${bankLimit.toLocaleString()}`, inline: true },
         )
-        .setDescription(`\`${config.prefix}bank einzahlen <Betrag>\` — Geld einzahlen\n\`${config.prefix}bank abheben <Betrag>\` — Geld abheben\n\`${config.prefix}bank einzahlen all\` — Alles einzahlen`)
+        .setDescription(`\`/bank einzahlen\` — Geld einzahlen\n\`/bank abheben\` — Geld abheben`)
         .setTimestamp();
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
-    const action = args[0].toLowerCase();
     const bankLimit = getBankLimit(userId);
 
-    if (action === 'einzahlen' || action === 'deposit') {
+    if (sub === 'einzahlen') {
       const user = db.getUser(userId);
+      const betragStr = interaction.options.getString('betrag');
       let amount;
-      if (args[1] === 'all' || args[1] === 'alles') {
+      if (betragStr === 'all' || betragStr === 'alles') {
         amount = Math.min(user.balance, bankLimit - user.bank);
       } else {
-        amount = parseInt(args[1]);
+        amount = parseInt(betragStr);
       }
 
-      if (!amount || amount <= 0) return message.reply('❌ Bitte gib einen gültigen Betrag an!');
-      if (user.balance < amount) return message.reply(`❌ Du hast nur **${config.currencySymbol}${user.balance}** Bargeld!`);
-      if (user.bank + amount > bankLimit) return message.reply(`❌ Bank-Limit erreicht! Max: **${config.currencySymbol}${bankLimit}**. Kaufe einen Tresor für mehr Kapazität!`);
+      if (!amount || amount <= 0) return await interaction.reply('❌ Bitte gib einen gültigen Betrag an!');
+      if (user.balance < amount) return await interaction.reply(`❌ Du hast nur **${config.currencySymbol}${user.balance}** Bargeld!`);
+      if (user.bank + amount > bankLimit) return await interaction.reply(`❌ Bank-Limit erreicht! Max: **${config.currencySymbol}${bankLimit}**. Kaufe einen Tresor für mehr Kapazität!`);
 
       db.deposit(userId, amount);
       const updated = db.getUser(userId);
@@ -55,19 +73,20 @@ module.exports = {
           { name: '🏦 Bank', value: `${config.currencySymbol}${updated.bank.toLocaleString()}`, inline: true },
         )
         .setTimestamp();
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
 
-    } else if (action === 'abheben' || action === 'withdraw') {
+    } else if (sub === 'abheben') {
       const user = db.getUser(userId);
+      const betragStr = interaction.options.getString('betrag');
       let amount;
-      if (args[1] === 'all' || args[1] === 'alles') {
+      if (betragStr === 'all' || betragStr === 'alles') {
         amount = user.bank;
       } else {
-        amount = parseInt(args[1]);
+        amount = parseInt(betragStr);
       }
 
-      if (!amount || amount <= 0) return message.reply('❌ Bitte gib einen gültigen Betrag an!');
-      if (user.bank < amount) return message.reply(`❌ Du hast nur **${config.currencySymbol}${user.bank}** in der Bank!`);
+      if (!amount || amount <= 0) return await interaction.reply('❌ Bitte gib einen gültigen Betrag an!');
+      if (user.bank < amount) return await interaction.reply(`❌ Du hast nur **${config.currencySymbol}${user.bank}** in der Bank!`);
 
       db.withdraw(userId, amount);
       const updated = db.getUser(userId);
@@ -81,9 +100,7 @@ module.exports = {
           { name: '🏦 Bank', value: `${config.currencySymbol}${updated.bank.toLocaleString()}`, inline: true },
         )
         .setTimestamp();
-      message.reply({ embeds: [embed] });
-    } else {
-      message.reply(`❌ Unbekannte Aktion! Nutze \`${config.prefix}bank einzahlen/abheben <Betrag>\``);
+      await interaction.reply({ embeds: [embed] });
     }
   },
 };

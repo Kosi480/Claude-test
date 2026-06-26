@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const segments = [
@@ -18,30 +18,30 @@ const COOLDOWN = 60 * 1000;
 const cooldowns = new Map();
 
 module.exports = {
-  name: 'wheel',
-  aliases: ['glücksrad', 'rad', 'spin'],
-  description: 'Drehe das Glücksrad! (!wheel <Betrag>, 60s CD)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('wheel')
+    .setDescription('Drehe das Glücksrad! (60s Cooldown)')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}wheel <Betrag>\``);
 
     const lastSpin = cooldowns.get(userId);
     if (lastSpin && Date.now() - lastSpin < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastSpin)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Ungültiger Betrag!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
     cooldowns.set(userId, Date.now());
 
@@ -78,6 +78,6 @@ module.exports = {
       .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

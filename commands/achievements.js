@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const achievements = [
@@ -68,14 +68,14 @@ function checkAchievements(userId) {
 }
 
 module.exports = {
-  name: 'achievements',
-  aliases: ['erfolge', 'ach'],
-  description: 'Zeige deine Achievements/Erfolge',
+  data: new SlashCommandBuilder()
+    .setName('achievements')
+    .setDescription('Zeige deine Achievements/Erfolge'),
   incrementStat,
   checkAchievements,
   getStats,
-  execute(message) {
-    const userId = message.author.id;
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
     const stats = getStats(userId);
     const unlocked = unlockedAchievements.get(userId) || new Set();
@@ -105,6 +105,6 @@ module.exports = {
       embed.addFields({ name: '🎉 Neu freigeschaltet!', value: bonus });
     }
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

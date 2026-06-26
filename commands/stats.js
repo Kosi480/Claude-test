@@ -1,11 +1,11 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 module.exports = {
-  name: 'stats',
-  aliases: ['serverstats', 'economystats', 'statistik'],
-  description: 'Zeigt Server-Economy-Statistiken',
-  execute(message) {
+  data: new SlashCommandBuilder()
+    .setName('stats')
+    .setDescription('Zeigt Server-Economy-Statistiken'),
+  async execute(interaction) {
     const config = require('../config.json');
 
     const totalUsers = db.db.prepare('SELECT COUNT(*) as count FROM users').get().count;
@@ -45,6 +45,6 @@ module.exports = {
       embed.addFields({ name: '🔥 Beliebteste Items', value: itemList, inline: false });
     }
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

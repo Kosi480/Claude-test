@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const findings = [
@@ -28,21 +28,21 @@ const rarityColors = {
 };
 
 module.exports = {
-  name: 'dig',
-  aliases: ['graben', 'buddeln', 'schaufeln'],
-  description: 'Grabe nach Schätzen (benötigt Schaufel)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('dig')
+    .setDescription('Grabe nach Schätzen (benötigt Schaufel)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
     if (!db.hasItem(userId, 'Schaufel')) {
-      return message.reply(`❌ Du brauchst eine **Schaufel**! Kaufe eine im \`${config.prefix}shop\``);
+      return interaction.reply(`❌ Du brauchst eine **Schaufel**! Kaufe eine im \`/shop\``);
     }
 
     const lastDig = cooldowns.get(userId);
     if (lastDig && Date.now() - lastDig < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastDig)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
     cooldowns.set(userId, Date.now());
@@ -73,6 +73,6 @@ module.exports = {
       .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

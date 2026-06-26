@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const animals = [
@@ -33,17 +33,17 @@ const rarityColors = {
 };
 
 module.exports = {
-  name: 'hunt',
-  aliases: ['jagen', 'jagd'],
-  description: 'Geh auf die Jagd (30s Cooldown)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('hunt')
+    .setDescription('Geh auf die Jagd (30s Cooldown)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
     const lastHunt = cooldowns.get(userId);
     if (lastHunt && Date.now() - lastHunt < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastHunt)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
     cooldowns.set(userId, Date.now());
@@ -57,7 +57,7 @@ module.exports = {
         .setTitle('🏹 Jagd')
         .setDescription(failMsg)
         .setTimestamp();
-      return message.reply({ embeds: [embed] });
+      return interaction.reply({ embeds: [embed] });
     }
 
     const roll = Math.random() * weights.reduce((a, b) => a + b, 0);
@@ -82,6 +82,6 @@ module.exports = {
       .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

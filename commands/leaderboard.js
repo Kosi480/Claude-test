@@ -1,16 +1,16 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 module.exports = {
-  name: 'leaderboard',
-  aliases: ['lb', 'top', 'rangliste'],
-  description: 'Zeigt die reichsten Spieler',
-  execute(message) {
+  data: new SlashCommandBuilder()
+    .setName('leaderboard')
+    .setDescription('Zeigt die reichsten Spieler'),
+  async execute(interaction) {
     const topUsers = db.getTopUsers(10);
     const config = require('../config.json');
 
     if (!topUsers.length) {
-      return message.reply('📊 Noch keine Spieler in der Rangliste!');
+      return interaction.reply('📊 Noch keine Spieler in der Rangliste!');
     }
 
     const medals = ['🥇', '🥈', '🥉'];
@@ -25,6 +25,6 @@ module.exports = {
       .setDescription(lines.join('\n'))
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

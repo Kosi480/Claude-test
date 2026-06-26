@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const petTypes = [
@@ -40,22 +40,41 @@ function getPetBonus(userId) {
 }
 
 module.exports = {
-  name: 'pet',
-  aliases: ['haustier', 'tier'],
-  description: 'Haustier-System (!pet, !pet adopt, !pet feed, !pet train, !pet rename)',
+  data: new SlashCommandBuilder()
+    .setName('pet')
+    .setDescription('Haustier-System')
+    .addSubcommand(sub =>
+      sub.setName('info')
+        .setDescription('Zeige dein Haustier'))
+    .addSubcommand(sub =>
+      sub.setName('adopt')
+        .setDescription('Adoptiere ein neues Haustier'))
+    .addSubcommand(sub =>
+      sub.setName('feed')
+        .setDescription('Fuettere dein Haustier'))
+    .addSubcommand(sub =>
+      sub.setName('train')
+        .setDescription('Trainiere dein Haustier'))
+    .addSubcommand(sub =>
+      sub.setName('rename')
+        .setDescription('Benenne dein Haustier um')
+        .addStringOption(opt =>
+          opt.setName('name')
+            .setDescription('Der neue Name fuer dein Haustier')
+            .setRequired(true))),
   getPetBonus,
-  execute(message, args) {
-    const userId = message.author.id;
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-    const action = (args[0] || 'info').toLowerCase();
+    const action = interaction.options.getSubcommand();
 
-    if (action === 'adopt' || action === 'adoptieren') {
+    if (action === 'adopt') {
       const existing = getPet(userId);
-      if (existing) return message.reply('❌ Du hast bereits ein Haustier! Nutze `!pet` um es zu sehen.');
+      if (existing) return await interaction.reply('❌ Du hast bereits ein Haustier! Nutze `/pet info` um es zu sehen.');
 
       const balance = db.getBalance(userId);
       if (balance < ADOPT_COST) {
-        return message.reply(`❌ Eine Adoption kostet **${config.currencySymbol}${ADOPT_COST}**! Du hast nur **${config.currencySymbol}${balance}**.`);
+        return await interaction.reply(`❌ Eine Adoption kostet **${config.currencySymbol}${ADOPT_COST}**! Du hast nur **${config.currencySymbol}${balance}**.`);
       }
 
       const row = new ActionRowBuilder().addComponents(
@@ -79,63 +98,62 @@ module.exports = {
         .setFooter({ text: '30 Sekunden Zeit' })
         .setTimestamp();
 
-      message.reply({ embeds: [embed], components: [row, row2] }).then(msg => {
-        const collector = msg.createMessageComponentCollector({ time: 30000 });
+      const msg = await interaction.reply({ embeds: [embed], components: [row, row2], fetchReply: true });
+      const collector = msg.createMessageComponentCollector({ time: 30000 });
 
-        collector.on('collect', (interaction) => {
-          if (interaction.user.id !== userId) {
-            return interaction.reply({ content: '❌ Das ist nicht deine Adoption!', flags: 64 });
-          }
+      collector.on('collect', (btnInteraction) => {
+        if (btnInteraction.user.id !== userId) {
+          return btnInteraction.reply({ content: '❌ Das ist nicht deine Adoption!', flags: 64 });
+        }
 
-          collector.stop();
-          const idx = parseInt(interaction.customId.split('_')[2]);
-          const chosen = petTypes[idx];
+        collector.stop();
+        const idx = parseInt(btnInteraction.customId.split('_')[2]);
+        const chosen = petTypes[idx];
 
-          if (db.getBalance(userId) < ADOPT_COST) {
-            return interaction.update({ content: '❌ Nicht genug Geld!', embeds: [], components: [] });
-          }
+        if (db.getBalance(userId) < ADOPT_COST) {
+          return btnInteraction.update({ content: '❌ Nicht genug Geld!', embeds: [], components: [] });
+        }
 
-          db.updateBalance(userId, -ADOPT_COST);
-          db.db.prepare(
-            'INSERT INTO pets (user_id, name, species, emoji, bonus_type, bonus_value, last_fed) VALUES (?, ?, ?, ?, ?, ?, ?)'
-          ).run(userId, chosen.species, chosen.species, chosen.emoji, chosen.bonus_type, chosen.bonus_value, new Date().toISOString());
+        db.updateBalance(userId, -ADOPT_COST);
+        db.db.prepare(
+          'INSERT INTO pets (user_id, name, species, emoji, bonus_type, bonus_value, last_fed) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).run(userId, chosen.species, chosen.species, chosen.emoji, chosen.bonus_type, chosen.bonus_value, new Date().toISOString());
 
-          const embed = new EmbedBuilder()
-            .setColor('#2ecc71')
-            .setTitle(`${chosen.emoji} Haustier adoptiert!`)
-            .setDescription(
-              `Du hast **${chosen.species}** adoptiert!\n` +
-              `Bonus: ${chosen.desc}\n\n` +
-              `Vergiss nicht, dein Haustier regelmäßig zu füttern! (\`${config.prefix}pet feed\`)`
-            )
-            .setTimestamp();
+        const embed = new EmbedBuilder()
+          .setColor('#2ecc71')
+          .setTitle(`${chosen.emoji} Haustier adoptiert!`)
+          .setDescription(
+            `Du hast **${chosen.species}** adoptiert!\n` +
+            `Bonus: ${chosen.desc}\n\n` +
+            `Vergiss nicht, dein Haustier regelmäßig zu füttern! (\`/pet feed\`)`
+          )
+          .setTimestamp();
 
-          interaction.update({ embeds: [embed], components: [] });
-        });
+        btnInteraction.update({ embeds: [embed], components: [] });
+      });
 
-        collector.on('end', (_, reason) => {
-          if (reason === 'time') msg.edit({ components: [] });
-        });
+      collector.on('end', (_, reason) => {
+        if (reason === 'time') msg.edit({ components: [] });
       });
       return;
     }
 
     const pet = getPet(userId);
     if (!pet && action !== 'adopt') {
-      return message.reply(`❌ Du hast kein Haustier! Adoptiere eins mit \`${config.prefix}pet adopt\``);
+      return await interaction.reply('❌ Du hast kein Haustier! Adoptiere eins mit `/pet adopt`');
     }
 
-    if (action === 'feed' || action === 'füttern') {
+    if (action === 'feed') {
       if (pet.last_fed) {
         const diff = Date.now() - new Date(pet.last_fed).getTime();
         if (diff < FEED_COOLDOWN) {
           const remaining = Math.ceil((FEED_COOLDOWN - diff) / 60000);
-          return message.reply(`⏳ Du kannst dein Haustier in **${remaining} Minuten** wieder füttern!`);
+          return await interaction.reply(`⏳ Du kannst dein Haustier in **${remaining} Minuten** wieder füttern!`);
         }
       }
 
       const balance = db.getBalance(userId);
-      if (balance < FEED_COST) return message.reply(`❌ Füttern kostet **${config.currencySymbol}${FEED_COST}**!`);
+      if (balance < FEED_COST) return await interaction.reply(`❌ Füttern kostet **${config.currencySymbol}${FEED_COST}**!`);
 
       db.updateBalance(userId, -FEED_COST);
       db.db.prepare('UPDATE pets SET hunger = MIN(100, hunger + 30), happiness = MIN(100, happiness + 15), last_fed = ? WHERE user_id = ?')
@@ -150,13 +168,13 @@ module.exports = {
         .setFooter({ text: `Kosten: ${config.currencySymbol}${FEED_COST}` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
       return;
     }
 
-    if (action === 'train' || action === 'trainieren') {
+    if (action === 'train') {
       decayStats(pet);
-      if (pet.hunger < 30) return message.reply('❌ Dein Haustier hat zu viel Hunger zum Trainieren! Füttere es zuerst.');
+      if (pet.hunger < 30) return await interaction.reply('❌ Dein Haustier hat zu viel Hunger zum Trainieren! Füttere es zuerst.');
 
       const xpGain = Math.floor(Math.random() * 30) + 10;
       const newXp = pet.xp + xpGain;
@@ -178,21 +196,21 @@ module.exports = {
         .setDescription(`+**${xpGain} XP** erhalten!\nXP: ${remainingXp}/${XP_PER_LEVEL} | Level: **${newLevel}**${levelUpText}`)
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
       return;
     }
 
-    if (action === 'rename' || action === 'umbenennen') {
-      const newName = args.slice(1).join(' ');
-      if (!newName) return message.reply('❌ `!pet rename <Name>`');
-      if (newName.length > 20) return message.reply('❌ Name max 20 Zeichen!');
+    if (action === 'rename') {
+      const newName = interaction.options.getString('name');
+      if (newName.length > 20) return await interaction.reply('❌ Name max 20 Zeichen!');
 
       db.db.prepare('UPDATE pets SET name = ? WHERE user_id = ?').run(newName, userId);
 
-      message.reply(`✅ Dein Haustier heißt jetzt **${newName}**!`);
+      await interaction.reply(`✅ Dein Haustier heißt jetzt **${newName}**!`);
       return;
     }
 
+    // info subcommand
     decayStats(pet);
     const petType = petTypes.find(p => p.species === pet.species);
     const levelMult = 1 + (pet.level - 1) * 0.1;
@@ -208,10 +226,10 @@ module.exports = {
         { name: '😊 Freude', value: `${statusBar(pet.happiness)} ${pet.happiness}%`, inline: true },
         { name: '⚡ Bonus', value: `${petType ? petType.desc.replace(/\+\d+/, '+' + currentBonus) : 'Keiner'}`, inline: false },
       )
-      .setFooter({ text: `${config.prefix}pet feed | ${config.prefix}pet train | ${config.prefix}pet rename <Name>` })
+      .setFooter({ text: `/pet feed | /pet train | /pet rename` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };
 
