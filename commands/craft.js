@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const recipes = [
@@ -57,15 +57,25 @@ function registerCraftedItems() {
 registerCraftedItems();
 
 module.exports = {
-  name: 'craft',
-  aliases: ['craften', 'herstellen', 'bauen'],
-  description: 'Stelle Items her (!craft list / !craft <Rezeptname>)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('craft')
+    .setDescription('Stelle Items aus Rezepten her')
+    .addSubcommand(sub =>
+      sub.setName('list')
+        .setDescription('Zeige alle verfuegbaren Rezepte'))
+    .addSubcommand(sub =>
+      sub.setName('herstellen')
+        .setDescription('Stelle ein Item her')
+        .addStringOption(opt =>
+          opt.setName('rezept')
+            .setDescription('Name des Rezepts')
+            .setRequired(true))),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-    const action = args.join(' ').toLowerCase();
+    const action = interaction.options.getSubcommand();
 
-    if (!args.length || action === 'list' || action === 'liste' || action === 'rezepte') {
+    if (action === 'list') {
       const inventory = db.getInventory(userId);
 
       const lines = recipes.map(r => {
@@ -83,31 +93,33 @@ module.exports = {
         .setColor('#e67e22')
         .setTitle('🔨 Crafting — Rezepte')
         .setDescription(lines.join('\n\n'))
-        .setFooter({ text: `${config.prefix}craft <Name> zum Herstellen` })
+        .setFooter({ text: `/craft herstellen zum Herstellen` })
         .setTimestamp();
 
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
-    const recipe = recipes.find(r => r.name.toLowerCase() === action);
+    // herstellen subcommand
+    const rezeptName = interaction.options.getString('rezept');
+    const recipe = recipes.find(r => r.name.toLowerCase() === rezeptName.toLowerCase());
     if (!recipe) {
-      const match = recipes.find(r => r.name.toLowerCase().includes(action));
-      if (!match) return message.reply(`❌ Rezept nicht gefunden! Nutze \`${config.prefix}craft list\``);
-      return craftItem(message, match, userId, config);
+      const match = recipes.find(r => r.name.toLowerCase().includes(rezeptName.toLowerCase()));
+      if (!match) return await interaction.reply('❌ Rezept nicht gefunden! Nutze `/craft list`');
+      return await craftItem(interaction, match, userId, config);
     }
 
-    craftItem(message, recipe, userId, config);
+    await craftItem(interaction, recipe, userId, config);
   },
 };
 
-function craftItem(message, recipe, userId, config) {
+async function craftItem(interaction, recipe, userId, config) {
   const inventory = db.getInventory(userId);
 
   for (const ing of recipe.ingredients) {
     const has = inventory.find(i => i.item_name === ing.item);
     const hasQty = has ? has.quantity : 0;
     if (hasQty < ing.qty) {
-      return message.reply(`❌ Dir fehlt **${ing.item}** x${ing.qty - hasQty}!`);
+      return await interaction.reply(`❌ Dir fehlt **${ing.item}** x${ing.qty - hasQty}!`);
     }
   }
 
@@ -129,5 +141,5 @@ function craftItem(message, recipe, userId, config) {
     .setFooter({ text: `Verkaufswert: ${config.currencySymbol}${recipe.sellPrice.toLocaleString()}` })
     .setTimestamp();
 
-  message.reply({ embeds: [embed] });
+  await interaction.reply({ embeds: [embed] });
 }

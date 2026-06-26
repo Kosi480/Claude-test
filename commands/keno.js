@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const COOLDOWN = 30 * 1000;
@@ -20,51 +20,49 @@ const payouts = {
 };
 
 module.exports = {
-  name: 'keno',
-  aliases: ['lotterie', 'zahlenlotto'],
-  description: 'Wähle Zahlen und hoffe auf Treffer! (!keno <Betrag> <Zahlen>, 30s CD)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('keno')
+    .setDescription('Wähle Zahlen und hoffe auf Treffer! (30s Cooldown)')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true))
+    .addStringOption(opt => opt.setName('zahlen').setDescription('Zahlen getrennt durch Leerzeichen (z.B. "3 15 22 37")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-
-    if (args.length < 2) {
-      return message.reply(
-        `❌ Nutzung: \`${config.prefix}keno <Betrag> <Zahl1> <Zahl2> ...\`\n` +
-        `Wähle 1-10 Zahlen zwischen 1 und ${MAX_NUM}.\n` +
-        `Beispiel: \`${config.prefix}keno 100 3 15 22 37\``
-      );
-    }
 
     const lastPlay = cooldowns.get(userId);
     if (lastPlay && Date.now() - lastPlay < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastPlay)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Ungültiger Betrag!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+
+    const zahlenStr = interaction.options.getString('zahlen');
+    const zahlenArgs = zahlenStr.trim().split(/\s+/);
 
     const picked = [];
-    for (let i = 1; i < args.length; i++) {
-      const num = parseInt(args[i]);
+    for (let i = 0; i < zahlenArgs.length; i++) {
+      const num = parseInt(zahlenArgs[i]);
       if (isNaN(num) || num < 1 || num > MAX_NUM) {
-        return message.reply(`❌ **${args[i]}** ist keine gültige Zahl (1-${MAX_NUM})!`);
+        return interaction.reply(`❌ **${zahlenArgs[i]}** ist keine gültige Zahl (1-${MAX_NUM})!`);
       }
       if (picked.includes(num)) {
-        return message.reply(`❌ Zahl **${num}** wurde doppelt gewählt!`);
+        return interaction.reply(`❌ Zahl **${num}** wurde doppelt gewählt!`);
       }
       picked.push(num);
     }
 
     if (picked.length < 1 || picked.length > 10) {
-      return message.reply('❌ Wähle zwischen 1 und 10 Zahlen!');
+      return interaction.reply('❌ Wähle zwischen 1 und 10 Zahlen!');
     }
 
     cooldowns.set(userId, Date.now());
@@ -133,6 +131,6 @@ module.exports = {
       .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

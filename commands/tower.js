@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const MAX_FLOORS = 10;
@@ -19,30 +19,30 @@ const floors = [
 ];
 
 module.exports = {
-  name: 'tower',
-  aliases: ['turm', 'climb', 'klettern'],
-  description: 'Erklimme den Turm — je höher, desto mehr Gewinn! (!tower <Betrag>, 40s CD)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('tower')
+    .setDescription('Erklimme den Turm — je höher, desto mehr Gewinn! (40s CD)')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}tower <Betrag>\``);
 
     const lastPlay = cooldowns.get(userId);
     if (lastPlay && Date.now() - lastPlay < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastPlay)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Ungültiger Betrag!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
     cooldowns.set(userId, Date.now());
 
@@ -95,18 +95,48 @@ module.exports = {
       .setFooter({ text: '30s Zeit pro Entscheidung' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed], components: buildButtons() }).then(msg => {
-      const collector = msg.createMessageComponentCollector({ time: 30000 });
+    const msg = await interaction.reply({ embeds: [embed], components: buildButtons(), fetchReply: true });
+    const collector = msg.createMessageComponentCollector({ time: 30000 });
 
-      collector.on('collect', (interaction) => {
-        if (interaction.user.id !== userId) {
-          return interaction.reply({ content: '❌ Das ist nicht dein Turm!', flags: 64 });
-        }
-        if (gameOver) return;
+    collector.on('collect', (interaction) => {
+      if (interaction.user.id !== userId) {
+        return interaction.reply({ content: '❌ Das ist nicht dein Turm!', flags: 64 });
+      }
+      if (gameOver) return;
 
-        if (interaction.customId === `tower_cash_${userId}`) {
+      if (interaction.customId === `tower_cash_${userId}`) {
+        gameOver = true;
+        collector.stop('cashout');
+
+        const mult = floors[currentFloor].multiplier;
+        const winAmount = Math.floor(amount * mult);
+        const profit = winAmount - amount;
+        db.updateBalance(userId, profit);
+
+        const embed = new EmbedBuilder()
+          .setColor('#2ecc71')
+          .setTitle('🗼 Ausgecasht!')
+          .setDescription(
+            `${buildTower()}\n` +
+            `Ausgecasht auf **${floors[currentFloor].name}** — **${mult}x**\n` +
+            `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`
+          )
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+          .setTimestamp();
+
+        interaction.update({ embeds: [embed], components: [] });
+        return;
+      }
+
+      const nextFloor = currentFloor + 1;
+      const success = Math.random() < floors[nextFloor].chance;
+
+      if (success) {
+        currentFloor = nextFloor;
+
+        if (currentFloor >= floors.length - 1) {
           gameOver = true;
-          collector.stop('cashout');
+          collector.stop('top');
 
           const mult = floors[currentFloor].multiplier;
           const winAmount = Math.floor(amount * mult);
@@ -114,11 +144,11 @@ module.exports = {
           db.updateBalance(userId, profit);
 
           const embed = new EmbedBuilder()
-            .setColor('#2ecc71')
-            .setTitle('🗼 Ausgecasht!')
+            .setColor('#FFD700')
+            .setTitle('🏆 SPITZE ERREICHT!')
             .setDescription(
               `${buildTower()}\n` +
-              `Ausgecasht auf **${floors[currentFloor].name}** — **${mult}x**\n` +
+              `Du hast die Spitze erreicht! **${mult}x**!\n` +
               `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`
             )
             .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
@@ -128,106 +158,75 @@ module.exports = {
           return;
         }
 
-        const nextFloor = currentFloor + 1;
-        const success = Math.random() < floors[nextFloor].chance;
+        collector.resetTimer({ time: 30000 });
 
-        if (success) {
-          currentFloor = nextFloor;
+        const embed = new EmbedBuilder()
+          .setColor('#9b59b6')
+          .setTitle('🗼 Turm-Aufstieg')
+          .setDescription(
+            `Einsatz: **${config.currencySymbol}${amount.toLocaleString()}**\n\n` +
+            `${buildTower()}\n` +
+            `Weiter klettern oder auscashen?`
+          )
+          .setFooter({ text: '30s Zeit pro Entscheidung' })
+          .setTimestamp();
 
-          if (currentFloor >= floors.length - 1) {
-            gameOver = true;
-            collector.stop('top');
+        interaction.update({ embeds: [embed], components: buildButtons() });
+      } else {
+        gameOver = true;
+        currentFloor = nextFloor;
+        collector.stop('fell');
 
-            const mult = floors[currentFloor].multiplier;
-            const winAmount = Math.floor(amount * mult);
-            const profit = winAmount - amount;
-            db.updateBalance(userId, profit);
+        db.updateBalance(userId, -amount);
 
-            const embed = new EmbedBuilder()
-              .setColor('#FFD700')
-              .setTitle('🏆 SPITZE ERREICHT!')
-              .setDescription(
-                `${buildTower()}\n` +
-                `Du hast die Spitze erreicht! **${mult}x**!\n` +
-                `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`
-              )
-              .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-              .setTimestamp();
+        const embed = new EmbedBuilder()
+          .setColor('#e74c3c')
+          .setTitle('💀 Abgestürzt!')
+          .setDescription(
+            `${buildTower(true)}\n` +
+            `Du bist auf **${floors[nextFloor].name}** abgestürzt!\n` +
+            `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`
+          )
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+          .setTimestamp();
 
-            interaction.update({ embeds: [embed], components: [] });
-            return;
-          }
+        interaction.update({ embeds: [embed], components: [] });
+      }
+    });
 
-          collector.resetTimer({ time: 30000 });
+    collector.on('end', (_, reason) => {
+      if (reason === 'time' && !gameOver) {
+        gameOver = true;
+        if (currentFloor >= 0) {
+          const mult = floors[currentFloor].multiplier;
+          const winAmount = Math.floor(amount * mult);
+          const profit = winAmount - amount;
+          db.updateBalance(userId, profit);
 
           const embed = new EmbedBuilder()
-            .setColor('#9b59b6')
-            .setTitle('🗼 Turm-Aufstieg')
+            .setColor('#f39c12')
+            .setTitle('⏰ Zeit abgelaufen — Auto-Cashout')
             .setDescription(
-              `Einsatz: **${config.currencySymbol}${amount.toLocaleString()}**\n\n` +
               `${buildTower()}\n` +
-              `Weiter klettern oder auscashen?`
-            )
-            .setFooter({ text: '30s Zeit pro Entscheidung' })
-            .setTimestamp();
-
-          interaction.update({ embeds: [embed], components: buildButtons() });
-        } else {
-          gameOver = true;
-          currentFloor = nextFloor;
-          collector.stop('fell');
-
-          db.updateBalance(userId, -amount);
-
-          const embed = new EmbedBuilder()
-            .setColor('#e74c3c')
-            .setTitle('💀 Abgestürzt!')
-            .setDescription(
-              `${buildTower(true)}\n` +
-              `Du bist auf **${floors[nextFloor].name}** abgestürzt!\n` +
-              `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`
+              `Automatisch ausgecasht auf **${floors[currentFloor].name}** — **${mult}x**\n` +
+              `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`
             )
             .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
             .setTimestamp();
 
-          interaction.update({ embeds: [embed], components: [] });
+          msg.edit({ embeds: [embed], components: [] });
+        } else {
+          db.updateBalance(userId, -amount);
+          const embed = new EmbedBuilder()
+            .setColor('#e74c3c')
+            .setTitle('⏰ Zeit abgelaufen')
+            .setDescription(`Du hast nicht geklettert!\nVerlust: **-${config.currencySymbol}${amount.toLocaleString()}**`)
+            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+            .setTimestamp();
+
+          msg.edit({ embeds: [embed], components: [] });
         }
-      });
-
-      collector.on('end', (_, reason) => {
-        if (reason === 'time' && !gameOver) {
-          gameOver = true;
-          if (currentFloor >= 0) {
-            const mult = floors[currentFloor].multiplier;
-            const winAmount = Math.floor(amount * mult);
-            const profit = winAmount - amount;
-            db.updateBalance(userId, profit);
-
-            const embed = new EmbedBuilder()
-              .setColor('#f39c12')
-              .setTitle('⏰ Zeit abgelaufen — Auto-Cashout')
-              .setDescription(
-                `${buildTower()}\n` +
-                `Automatisch ausgecasht auf **${floors[currentFloor].name}** — **${mult}x**\n` +
-                `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`
-              )
-              .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-              .setTimestamp();
-
-            msg.edit({ embeds: [embed], components: [] });
-          } else {
-            db.updateBalance(userId, -amount);
-            const embed = new EmbedBuilder()
-              .setColor('#e74c3c')
-              .setTitle('⏰ Zeit abgelaufen')
-              .setDescription(`Du hast nicht geklettert!\nVerlust: **-${config.currencySymbol}${amount.toLocaleString()}**`)
-              .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-              .setTimestamp();
-
-            msg.edit({ embeds: [embed], components: [] });
-          }
-        }
-      });
+      }
     });
   },
 };

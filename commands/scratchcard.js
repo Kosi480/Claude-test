@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const symbols = [
@@ -48,31 +48,31 @@ function countMatches(card) {
 }
 
 module.exports = {
-  name: 'scratchcard',
-  aliases: ['rubbellos', 'scratch', 'rubben'],
-  description: 'Kaufe ein Rubbellos und kratze es frei! (!scratchcard <Betrag>, 45s CD)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('scratchcard')
+    .setDescription('Kaufe ein Rubbellos und kratze es frei! (45s Cooldown)')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}scratchcard <Betrag>\``);
 
     const lastPlay = cooldowns.get(userId);
     if (lastPlay && Date.now() - lastPlay < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastPlay)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
-    if (amount < 50) return message.reply('❌ Mindestens **$50** für ein Rubbellos!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Ungültiger Betrag!');
+    if (amount < 50) return interaction.reply('❌ Mindestens **$50** für ein Rubbellos!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
     cooldowns.set(userId, Date.now());
 
@@ -128,93 +128,92 @@ module.exports = {
       .setFooter({ text: '30s zum Rubbeln' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed], components: buildButtons() }).then(msg => {
-      const collector = msg.createMessageComponentCollector({ time: 30000 });
+    const msg = await interaction.reply({ embeds: [embed], components: buildButtons(), fetchReply: true });
+    const collector = msg.createMessageComponentCollector({ time: 30000 });
 
-      collector.on('collect', (interaction) => {
-        if (interaction.user.id !== userId) {
-          return interaction.reply({ content: '❌ Das ist nicht dein Rubbellos!', flags: 64 });
-        }
+    collector.on('collect', (interaction) => {
+      if (interaction.user.id !== userId) {
+        return interaction.reply({ content: '❌ Das ist nicht dein Rubbellos!', flags: 64 });
+      }
 
-        if (interaction.customId === `sc_all_${userId}`) {
-          revealed.fill(true);
+      if (interaction.customId === `sc_all_${userId}`) {
+        revealed.fill(true);
+      } else {
+        const idx = parseInt(interaction.customId.split('_')[1]);
+        revealed[idx] = true;
+      }
+
+      const allRevealed = revealed.every(r => r);
+
+      if (allRevealed) {
+        collector.stop('revealed');
+        const match = countMatches(card);
+
+        let resultText, color, profit;
+        if (match.symbol) {
+          const winMultiplier = match.count === 3 ? match.symbol.multiplier : match.count === 4 ? match.symbol.multiplier * 2 : match.symbol.multiplier * 5;
+          const winAmount = Math.floor(amount * winMultiplier);
+          profit = winAmount - amount;
+          db.updateBalance(userId, profit);
+          resultText = `${match.count}x ${match.symbol.emoji} **${match.symbol.name}** — **${winMultiplier}x**!\nGewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`;
+          color = '#2ecc71';
         } else {
-          const idx = parseInt(interaction.customId.split('_')[1]);
-          revealed[idx] = true;
+          profit = -amount;
+          db.updateBalance(userId, -amount);
+          resultText = `Keine 3 gleichen Symbole...\nVerlust: **${config.currencySymbol}${amount.toLocaleString()}**`;
+          color = '#e74c3c';
         }
 
-        const allRevealed = revealed.every(r => r);
-
-        if (allRevealed) {
-          collector.stop('revealed');
-          const match = countMatches(card);
-
-          let resultText, color, profit;
-          if (match.symbol) {
-            const winMultiplier = match.count === 3 ? match.symbol.multiplier : match.count === 4 ? match.symbol.multiplier * 2 : match.symbol.multiplier * 5;
-            const winAmount = Math.floor(amount * winMultiplier);
-            profit = winAmount - amount;
-            db.updateBalance(userId, profit);
-            resultText = `${match.count}x ${match.symbol.emoji} **${match.symbol.name}** — **${winMultiplier}x**!\nGewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`;
-            color = '#2ecc71';
-          } else {
-            profit = -amount;
-            db.updateBalance(userId, -amount);
-            resultText = `Keine 3 gleichen Symbole...\nVerlust: **${config.currencySymbol}${amount.toLocaleString()}**`;
-            color = '#e74c3c';
-          }
-
-          const resultEmbed = new EmbedBuilder()
-            .setColor(color)
-            .setTitle('🎫 Rubbellos — Ergebnis')
-            .setDescription(`${buildGrid()}\n${resultText}`)
-            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-            .setTimestamp();
-
-          return interaction.update({ embeds: [resultEmbed], components: [] });
-        }
-
-        const updateEmbed = new EmbedBuilder()
-          .setColor('#9b59b6')
-          .setTitle('🎫 Rubbellos')
-          .setDescription(
-            `Einsatz: **${config.currencySymbol}${amount.toLocaleString()}**\n\n` +
-            `${buildGrid()}\n` +
-            `Kratze weiter! 3+ gleiche = Gewinn!`
-          )
-          .setFooter({ text: '30s zum Rubbeln' })
+        const resultEmbed = new EmbedBuilder()
+          .setColor(color)
+          .setTitle('🎫 Rubbellos — Ergebnis')
+          .setDescription(`${buildGrid()}\n${resultText}`)
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
           .setTimestamp();
 
-        interaction.update({ embeds: [updateEmbed], components: buildButtons() });
-      });
+        return interaction.update({ embeds: [resultEmbed], components: [] });
+      }
 
-      collector.on('end', (_, reason) => {
-        if (reason === 'time') {
-          revealed.fill(true);
-          const match = countMatches(card);
+      const updateEmbed = new EmbedBuilder()
+        .setColor('#9b59b6')
+        .setTitle('🎫 Rubbellos')
+        .setDescription(
+          `Einsatz: **${config.currencySymbol}${amount.toLocaleString()}**\n\n` +
+          `${buildGrid()}\n` +
+          `Kratze weiter! 3+ gleiche = Gewinn!`
+        )
+        .setFooter({ text: '30s zum Rubbeln' })
+        .setTimestamp();
 
-          let resultText, profit;
-          if (match.symbol) {
-            const winMultiplier = match.count === 3 ? match.symbol.multiplier : match.count === 4 ? match.symbol.multiplier * 2 : match.symbol.multiplier * 5;
-            const winAmount = Math.floor(amount * winMultiplier);
-            profit = winAmount - amount;
-            db.updateBalance(userId, profit);
-            resultText = `${match.count}x ${match.symbol.emoji} **${match.symbol.name}** — **${winMultiplier}x**!\nGewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`;
-          } else {
-            db.updateBalance(userId, -amount);
-            resultText = `Keine 3 gleichen Symbole...\nVerlust: **${config.currencySymbol}${amount.toLocaleString()}**`;
-          }
+      interaction.update({ embeds: [updateEmbed], components: buildButtons() });
+    });
 
-          const embed = new EmbedBuilder()
-            .setColor(match.symbol ? '#2ecc71' : '#e74c3c')
-            .setTitle('🎫 Rubbellos — Zeit abgelaufen')
-            .setDescription(`${buildGrid()}\n${resultText}`)
-            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-            .setTimestamp();
+    collector.on('end', (_, reason) => {
+      if (reason === 'time') {
+        revealed.fill(true);
+        const match = countMatches(card);
 
-          msg.edit({ embeds: [embed], components: [] });
+        let resultText, profit;
+        if (match.symbol) {
+          const winMultiplier = match.count === 3 ? match.symbol.multiplier : match.count === 4 ? match.symbol.multiplier * 2 : match.symbol.multiplier * 5;
+          const winAmount = Math.floor(amount * winMultiplier);
+          profit = winAmount - amount;
+          db.updateBalance(userId, profit);
+          resultText = `${match.count}x ${match.symbol.emoji} **${match.symbol.name}** — **${winMultiplier}x**!\nGewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`;
+        } else {
+          db.updateBalance(userId, -amount);
+          resultText = `Keine 3 gleichen Symbole...\nVerlust: **${config.currencySymbol}${amount.toLocaleString()}**`;
         }
-      });
+
+        const embed = new EmbedBuilder()
+          .setColor(match.symbol ? '#2ecc71' : '#e74c3c')
+          .setTitle('🎫 Rubbellos — Zeit abgelaufen')
+          .setDescription(`${buildGrid()}\n${resultText}`)
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+          .setTimestamp();
+
+        msg.edit({ embeds: [embed], components: [] });
+      }
     });
   },
 };

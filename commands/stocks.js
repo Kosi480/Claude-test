@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const stocks = [
@@ -80,17 +80,45 @@ db.db.exec(`
 `);
 
 module.exports = {
-  name: 'stocks',
-  aliases: ['aktien', 'stock', 'börse'],
-  description: 'Aktienmarkt (!stocks, !stocks buy/sell <SYMBOL> <Anzahl>)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('stocks')
+    .setDescription('Aktienmarkt - kaufen, verkaufen und Portfolio verwalten')
+    .addSubcommand(sub =>
+      sub.setName('list')
+        .setDescription('Zeige alle verfuegbaren Aktien und Kurse'))
+    .addSubcommand(sub =>
+      sub.setName('buy')
+        .setDescription('Aktien kaufen')
+        .addStringOption(opt =>
+          opt.setName('symbol')
+            .setDescription('Das Aktien-Symbol (z.B. DSCRD, TECH)')
+            .setRequired(true))
+        .addIntegerOption(opt =>
+          opt.setName('anzahl')
+            .setDescription('Anzahl der Aktien')
+            .setRequired(false)))
+    .addSubcommand(sub =>
+      sub.setName('sell')
+        .setDescription('Aktien verkaufen')
+        .addStringOption(opt =>
+          opt.setName('symbol')
+            .setDescription('Das Aktien-Symbol (z.B. DSCRD, TECH)')
+            .setRequired(true))
+        .addStringOption(opt =>
+          opt.setName('anzahl')
+            .setDescription('Anzahl oder "all" fuer alle')
+            .setRequired(false)))
+    .addSubcommand(sub =>
+      sub.setName('portfolio')
+        .setDescription('Zeige dein Aktien-Depot')),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-    const action = (args[0] || 'list').toLowerCase();
+    const action = interaction.options.getSubcommand();
 
     updatePrices();
 
-    if (action === 'list' || action === 'liste' || action === 'markt') {
+    if (action === 'list') {
       const lines = stocks.map(s => {
         const price = getPrice(s.symbol);
         const change = getPriceChange(s.symbol);
@@ -103,26 +131,26 @@ module.exports = {
         .setColor('#3498db')
         .setTitle('📊 Aktienmarkt')
         .setDescription(lines.join('\n\n'))
-        .setFooter({ text: `Kaufen: ${config.prefix}stocks buy <SYMBOL> <Anzahl> | Kurse ändern sich alle 5 Min` })
+        .setFooter({ text: `Kaufen: /stocks buy <SYMBOL> <Anzahl> | Kurse ändern sich alle 5 Min` })
         .setTimestamp();
 
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
-    if (action === 'buy' || action === 'kaufen') {
-      const symbol = (args[1] || '').toUpperCase();
+    if (action === 'buy') {
+      const symbol = interaction.options.getString('symbol').toUpperCase();
       const stock = stocks.find(s => s.symbol === symbol);
-      if (!stock) return message.reply(`❌ Unbekannte Aktie! Nutze \`${config.prefix}stocks\` für alle Aktien.`);
+      if (!stock) return await interaction.reply(`❌ Unbekannte Aktie! Nutze \`/stocks list\` für alle Aktien.`);
 
-      const shares = parseInt(args[2]) || 1;
-      if (shares <= 0) return message.reply('❌ Ungültige Anzahl!');
+      const shares = interaction.options.getInteger('anzahl') || 1;
+      if (shares <= 0) return await interaction.reply('❌ Ungültige Anzahl!');
 
       const price = getPrice(symbol);
       const totalCost = price * shares;
       const balance = db.getBalance(userId);
 
       if (balance < totalCost) {
-        return message.reply(`❌ ${shares}x ${symbol} kostet **${config.currencySymbol}${totalCost.toLocaleString()}**, du hast nur **${config.currencySymbol}${balance.toLocaleString()}**!`);
+        return await interaction.reply(`❌ ${shares}x ${symbol} kostet **${config.currencySymbol}${totalCost.toLocaleString()}**, du hast nur **${config.currencySymbol}${balance.toLocaleString()}**!`);
       }
 
       db.updateBalance(userId, -totalCost);
@@ -145,19 +173,20 @@ module.exports = {
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
-    if (action === 'sell' || action === 'verkaufen') {
-      const symbol = (args[1] || '').toUpperCase();
+    if (action === 'sell') {
+      const symbol = interaction.options.getString('symbol').toUpperCase();
       const stock = stocks.find(s => s.symbol === symbol);
-      if (!stock) return message.reply(`❌ Unbekannte Aktie!`);
+      if (!stock) return await interaction.reply(`❌ Unbekannte Aktie!`);
 
       const holding = db.db.prepare('SELECT * FROM user_stocks WHERE user_id = ? AND symbol = ?').get(userId, symbol);
-      if (!holding || holding.shares <= 0) return message.reply(`❌ Du besitzt keine **${symbol}**-Aktien!`);
+      if (!holding || holding.shares <= 0) return await interaction.reply(`❌ Du besitzt keine **${symbol}**-Aktien!`);
 
-      const shares = args[2] === 'all' || args[2] === 'alles' ? holding.shares : (parseInt(args[2]) || 1);
-      if (shares <= 0 || shares > holding.shares) return message.reply(`❌ Du hast nur **${holding.shares}** ${symbol}-Aktien!`);
+      const anzahlStr = interaction.options.getString('anzahl');
+      const shares = (anzahlStr === 'all' || anzahlStr === 'alles') ? holding.shares : (parseInt(anzahlStr) || 1);
+      if (shares <= 0 || shares > holding.shares) return await interaction.reply(`❌ Du hast nur **${holding.shares}** ${symbol}-Aktien!`);
 
       const price = getPrice(symbol);
       const totalValue = price * shares;
@@ -184,13 +213,13 @@ module.exports = {
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
-    if (action === 'portfolio' || action === 'depot') {
+    if (action === 'portfolio') {
       const holdings = db.db.prepare('SELECT * FROM user_stocks WHERE user_id = ? AND shares > 0').all(userId);
 
-      if (!holdings.length) return message.reply('📊 Dein Depot ist leer!');
+      if (!holdings.length) return await interaction.reply('📊 Dein Depot ist leer!');
 
       let totalValue = 0;
       let totalProfit = 0;
@@ -215,9 +244,7 @@ module.exports = {
         )
         .setTimestamp();
 
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
-
-    message.reply(`📊 Nutzung: \`${config.prefix}stocks\` | \`buy/sell <SYMBOL> <Anzahl>\` | \`portfolio\``);
   },
 };

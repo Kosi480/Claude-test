@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const questions = [
@@ -25,19 +25,19 @@ const cooldowns = new Map();
 const activeQuizzes = new Set();
 
 module.exports = {
-  name: 'trivia',
-  aliases: ['quiz', 'rätsel'],
-  description: 'Beantworte eine Quizfrage und verdiene Coins (30s Cooldown)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('trivia')
+    .setDescription('Beantworte eine Quizfrage und verdiene Coins (30s Cooldown)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
-    if (activeQuizzes.has(userId)) return message.reply('❌ Du hast bereits ein aktives Quiz!');
+    if (activeQuizzes.has(userId)) return interaction.reply('❌ Du hast bereits ein aktives Quiz!');
 
     const lastTrivia = cooldowns.get(userId);
     if (lastTrivia && Date.now() - lastTrivia < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastTrivia)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
     const question = questions[Math.floor(Math.random() * questions.length)];
@@ -67,50 +67,49 @@ module.exports = {
       .setFooter({ text: `Belohnung: ${config.currencySymbol}${reward} | 15 Sekunden Zeit` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed], components: [row] }).then(msg => {
-      const collector = msg.createMessageComponentCollector({ time: 15000 });
+    const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+    const collector = msg.createMessageComponentCollector({ time: 15000 });
 
-      collector.on('collect', (interaction) => {
-        if (interaction.user.id !== userId) {
-          return interaction.reply({ content: '❌ Das ist nicht dein Quiz!', flags: 64 });
-        }
+    collector.on('collect', (btnInteraction) => {
+      if (btnInteraction.user.id !== userId) {
+        return btnInteraction.reply({ content: '❌ Das ist nicht dein Quiz!', flags: 64 });
+      }
 
-        collector.stop();
+      collector.stop();
+      activeQuizzes.delete(userId);
+
+      const chosen = parseInt(btnInteraction.customId.split('_')[1]);
+      const correct = chosen === question.correct;
+
+      if (correct) {
+        db.updateBalance(userId, reward);
+        const embed = new EmbedBuilder()
+          .setColor('#2ecc71')
+          .setTitle('✅ Richtig!')
+          .setDescription(`**${question.answers[question.correct]}** war richtig! Du bekommst **${config.currencySymbol}${reward}**!`)
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+          .setTimestamp();
+        btnInteraction.update({ embeds: [embed], components: [] });
+      } else {
+        const embed = new EmbedBuilder()
+          .setColor('#e74c3c')
+          .setTitle('❌ Falsch!')
+          .setDescription(`Die richtige Antwort war: **${question.answers[question.correct]}**`)
+          .setTimestamp();
+        btnInteraction.update({ embeds: [embed], components: [] });
+      }
+    });
+
+    collector.on('end', (_, reason) => {
+      if (reason === 'time') {
         activeQuizzes.delete(userId);
-
-        const chosen = parseInt(interaction.customId.split('_')[1]);
-        const correct = chosen === question.correct;
-
-        if (correct) {
-          db.updateBalance(userId, reward);
-          const embed = new EmbedBuilder()
-            .setColor('#2ecc71')
-            .setTitle('✅ Richtig!')
-            .setDescription(`**${question.answers[question.correct]}** war richtig! Du bekommst **${config.currencySymbol}${reward}**!`)
-            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-            .setTimestamp();
-          interaction.update({ embeds: [embed], components: [] });
-        } else {
-          const embed = new EmbedBuilder()
-            .setColor('#e74c3c')
-            .setTitle('❌ Falsch!')
-            .setDescription(`Die richtige Antwort war: **${question.answers[question.correct]}**`)
-            .setTimestamp();
-          interaction.update({ embeds: [embed], components: [] });
-        }
-      });
-
-      collector.on('end', (_, reason) => {
-        if (reason === 'time') {
-          activeQuizzes.delete(userId);
-          const embed = new EmbedBuilder()
-            .setColor('#95a5a6')
-            .setTitle('⏰ Zeit abgelaufen!')
-            .setDescription(`Die richtige Antwort wäre **${question.answers[question.correct]}** gewesen.`)
-            .setTimestamp();
-          msg.edit({ embeds: [embed], components: [] });
-        }
-      });
+        const embed = new EmbedBuilder()
+          .setColor('#95a5a6')
+          .setTitle('⏰ Zeit abgelaufen!')
+          .setDescription(`Die richtige Antwort wäre **${question.answers[question.correct]}** gewesen.`)
+          .setTimestamp();
+        msg.edit({ embeds: [embed], components: [] });
+      }
     });
   },
 };

@@ -1,23 +1,59 @@
-const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 module.exports = {
-  name: 'admin',
-  aliases: ['eco', 'economy'],
-  description: 'Admin-Befehle für die Economy (nur Admins)',
-  execute(message, args) {
-    if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
-      return message.reply('❌ Du brauchst **Administrator**-Rechte für diesen Befehl!');
-    }
-
+  data: new SlashCommandBuilder()
+    .setName('admin')
+    .setDescription('Admin-Befehle fuer die Economy (nur Admins)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addSubcommand(sub =>
+      sub.setName('give')
+        .setDescription('Gib einem Benutzer Geld')
+        .addUserOption(opt =>
+          opt.setName('user')
+            .setDescription('Der Benutzer')
+            .setRequired(true))
+        .addIntegerOption(opt =>
+          opt.setName('betrag')
+            .setDescription('Der Betrag')
+            .setRequired(true)))
+    .addSubcommand(sub =>
+      sub.setName('remove')
+        .setDescription('Nimm einem Benutzer Geld')
+        .addUserOption(opt =>
+          opt.setName('user')
+            .setDescription('Der Benutzer')
+            .setRequired(true))
+        .addIntegerOption(opt =>
+          opt.setName('betrag')
+            .setDescription('Der Betrag')
+            .setRequired(true)))
+    .addSubcommand(sub =>
+      sub.setName('set')
+        .setDescription('Setze das Guthaben eines Benutzers')
+        .addUserOption(opt =>
+          opt.setName('user')
+            .setDescription('Der Benutzer')
+            .setRequired(true))
+        .addIntegerOption(opt =>
+          opt.setName('betrag')
+            .setDescription('Der Betrag')
+            .setRequired(true)))
+    .addSubcommand(sub =>
+      sub.setName('reset')
+        .setDescription('Setze den Account eines Benutzers zurueck')
+        .addUserOption(opt =>
+          opt.setName('user')
+            .setDescription('Der Benutzer')
+            .setRequired(true))),
+  async execute(interaction) {
     const config = require('../config.json');
-    const action = (args[0] || '').toLowerCase();
+    const action = interaction.options.getSubcommand();
 
-    if (action === 'give' || action === 'geben') {
-      const target = message.mentions.users.first();
-      if (!target) return message.reply('❌ `!admin give @user <Betrag>`');
-      const amount = parseInt(args.find(a => !a.startsWith('<@') && a !== 'give' && a !== 'geben'));
-      if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
+    if (action === 'give') {
+      const target = interaction.options.getUser('user');
+      const amount = interaction.options.getInteger('betrag');
+      if (amount <= 0) return await interaction.reply('❌ Ungültiger Betrag!');
 
       db.updateBalance(target.id, amount);
 
@@ -27,13 +63,12 @@ module.exports = {
         .setDescription(`**${config.currencySymbol}${amount.toLocaleString()}** an **${target.username}** gegeben.`)
         .setFooter({ text: `Neues Guthaben: ${config.currencySymbol}${db.getBalance(target.id).toLocaleString()}` })
         .setTimestamp();
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
 
-    } else if (action === 'remove' || action === 'nehmen') {
-      const target = message.mentions.users.first();
-      if (!target) return message.reply('❌ `!admin remove @user <Betrag>`');
-      const amount = parseInt(args.find(a => !a.startsWith('<@') && a !== 'remove' && a !== 'nehmen'));
-      if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
+    } else if (action === 'remove') {
+      const target = interaction.options.getUser('user');
+      const amount = interaction.options.getInteger('betrag');
+      if (amount <= 0) return await interaction.reply('❌ Ungültiger Betrag!');
 
       db.updateBalance(target.id, -amount);
 
@@ -43,13 +78,11 @@ module.exports = {
         .setDescription(`**${config.currencySymbol}${amount.toLocaleString()}** von **${target.username}** genommen.`)
         .setFooter({ text: `Neues Guthaben: ${config.currencySymbol}${db.getBalance(target.id).toLocaleString()}` })
         .setTimestamp();
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
 
-    } else if (action === 'set' || action === 'setzen') {
-      const target = message.mentions.users.first();
-      if (!target) return message.reply('❌ `!admin set @user <Betrag>`');
-      const amount = parseInt(args.find(a => !a.startsWith('<@') && a !== 'set' && a !== 'setzen'));
-      if (isNaN(amount)) return message.reply('❌ Ungültiger Betrag!');
+    } else if (action === 'set') {
+      const target = interaction.options.getUser('user');
+      const amount = interaction.options.getInteger('betrag');
 
       db.setBalance(target.id, amount);
 
@@ -58,11 +91,10 @@ module.exports = {
         .setTitle('👑 Admin — Geld gesetzt')
         .setDescription(`Guthaben von **${target.username}** auf **${config.currencySymbol}${amount.toLocaleString()}** gesetzt.`)
         .setTimestamp();
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
 
     } else if (action === 'reset') {
-      const target = message.mentions.users.first();
-      if (!target) return message.reply('❌ `!admin reset @user`');
+      const target = interaction.options.getUser('user');
 
       db.setBalance(target.id, 0);
       db.db.prepare('UPDATE users SET bank = 0 WHERE user_id = ?').run(target.id);
@@ -73,20 +105,7 @@ module.exports = {
         .setTitle('👑 Admin — Account zurückgesetzt')
         .setDescription(`**${target.username}** wurde komplett zurückgesetzt (Geld, Bank, Inventar).`)
         .setTimestamp();
-      message.reply({ embeds: [embed] });
-
-    } else {
-      const embed = new EmbedBuilder()
-        .setColor('#f39c12')
-        .setTitle('👑 Admin-Befehle')
-        .setDescription(
-          `\`${config.prefix}admin give @user <Betrag>\` — Geld geben\n` +
-          `\`${config.prefix}admin remove @user <Betrag>\` — Geld nehmen\n` +
-          `\`${config.prefix}admin set @user <Betrag>\` — Geld setzen\n` +
-          `\`${config.prefix}admin reset @user\` — Account zurücksetzen`
-        )
-        .setTimestamp();
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     }
   },
 };

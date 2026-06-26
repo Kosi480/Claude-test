@@ -1,12 +1,13 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 module.exports = {
-  name: 'profile',
-  aliases: ['profil', 'stats'],
-  description: 'Zeigt dein Profil mit allen Stats',
-  execute(message) {
-    const target = message.mentions.users.first() || message.author;
+  data: new SlashCommandBuilder()
+    .setName('profile')
+    .setDescription('Zeigt dein Profil mit allen Stats')
+    .addUserOption(opt => opt.setName('user').setDescription('Der Spieler, dessen Profil du sehen willst')),
+  async execute(interaction) {
+    const target = interaction.options.getUser('user') || interaction.user;
     const user = db.getUser(target.id);
     const config = require('../config.json');
     const inventory = db.getInventory(target.id);
@@ -33,6 +34,6 @@ module.exports = {
       )
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

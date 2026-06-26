@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const GRID_SIZE = 5;
@@ -7,30 +7,30 @@ const COOLDOWN = 30 * 1000;
 const cooldowns = new Map();
 
 module.exports = {
-  name: 'mines',
-  aliases: ['minenfeld', 'minen', 'minesweeper'],
-  description: 'Minenfeld — Decke Felder auf ohne Minen zu treffen! (!mines <Betrag>, 30s CD)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('mines')
+    .setDescription('Minenfeld — Decke Felder auf ohne Minen zu treffen! (30s CD)')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}mines <Betrag>\``);
 
     const lastPlay = cooldowns.get(userId);
     if (lastPlay && Date.now() - lastPlay < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastPlay)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Ungültiger Betrag!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
     cooldowns.set(userId, Date.now());
 
@@ -107,19 +107,76 @@ module.exports = {
       .setFooter({ text: '45s Zeit | 7 Minen versteckt' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed], components: buildButtons() }).then(msg => {
-      const btnCollector = msg.createMessageComponentCollector({ time: 45000 });
-      const msgCollector = message.channel.createMessageCollector({
-        filter: m => m.author.id === userId && m.content.toLowerCase() === 'stop',
-        time: 45000,
-      });
+    const msg = await interaction.reply({ embeds: [embed], components: buildButtons(), fetchReply: true });
+    const btnCollector = msg.createMessageComponentCollector({ time: 45000 });
+    const msgCollector = interaction.channel.createMessageCollector({
+      filter: m => m.author.id === userId && m.content.toLowerCase() === 'stop',
+      time: 45000,
+    });
 
-      msgCollector.on('collect', (m) => {
-        if (gameOver || revealed.size === 0) return;
+    msgCollector.on('collect', (m) => {
+      if (gameOver || revealed.size === 0) return;
+      gameOver = true;
+      btnCollector.stop('cashout');
+      msgCollector.stop();
+      m.delete().catch(() => {});
+
+      const mult = getMultiplier();
+      const winAmount = Math.floor(amount * mult);
+      const profit = winAmount - amount;
+      db.updateBalance(userId, profit);
+
+      const embed = new EmbedBuilder()
+        .setColor('#2ecc71')
+        .setTitle('💰 Ausgecasht!')
+        .setDescription(
+          `${buildRevealedGrid()}\n` +
+          `**${revealed.size}** Felder aufgedeckt — **${mult}x**\n` +
+          `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`
+        )
+        .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+        .setTimestamp();
+
+      msg.edit({ embeds: [embed], components: [] });
+    });
+
+    btnCollector.on('collect', (interaction) => {
+      if (interaction.user.id !== userId) {
+        return interaction.reply({ content: '❌ Das ist nicht dein Spiel!', flags: 64 });
+      }
+      if (gameOver) return;
+
+      const idx = parseInt(interaction.customId.split('_')[1]);
+
+      if (mines.has(idx)) {
         gameOver = true;
-        btnCollector.stop('cashout');
+        btnCollector.stop('boom');
         msgCollector.stop();
-        m.delete().catch(() => {});
+
+        db.updateBalance(userId, -amount);
+
+        const embed = new EmbedBuilder()
+          .setColor('#e74c3c')
+          .setTitle('💥 BOOM! Mine getroffen!')
+          .setDescription(
+            `${buildRevealedGrid()}\n` +
+            `Du hast eine Mine getroffen!\n` +
+            `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`
+          )
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+          .setTimestamp();
+
+        interaction.update({ embeds: [embed], components: [] });
+        return;
+      }
+
+      revealed.add(idx);
+      const safeLeft = GRID_SIZE * GRID_SIZE - MINE_COUNT - revealed.size;
+
+      if (safeLeft === 0) {
+        gameOver = true;
+        btnCollector.stop('cleared');
+        msgCollector.stop();
 
         const mult = getMultiplier();
         const winAmount = Math.floor(amount * mult);
@@ -127,130 +184,72 @@ module.exports = {
         db.updateBalance(userId, profit);
 
         const embed = new EmbedBuilder()
-          .setColor('#2ecc71')
-          .setTitle('💰 Ausgecasht!')
+          .setColor('#FFD700')
+          .setTitle('🏆 ALLE FELDER GESCHAFFT!')
           .setDescription(
             `${buildRevealedGrid()}\n` +
-            `**${revealed.size}** Felder aufgedeckt — **${mult}x**\n` +
+            `Unglaublich! Alle sicheren Felder aufgedeckt!\n` +
+            `Multiplikator: **${mult}x**\n` +
             `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`
           )
           .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
           .setTimestamp();
 
-        msg.edit({ embeds: [embed], components: [] });
-      });
+        interaction.update({ embeds: [embed], components: [] });
+        return;
+      }
 
-      btnCollector.on('collect', (interaction) => {
-        if (interaction.user.id !== userId) {
-          return interaction.reply({ content: '❌ Das ist nicht dein Spiel!', flags: 64 });
-        }
-        if (gameOver) return;
+      const mult = getMultiplier();
+      const embed = new EmbedBuilder()
+        .setColor('#3498db')
+        .setTitle('💣 Minenfeld')
+        .setDescription(
+          `Einsatz: **${config.currencySymbol}${amount.toLocaleString()}**\n` +
+          `Aufgedeckt: **${revealed.size}** | Noch sicher: **${safeLeft}**\n\n` +
+          `${buildGrid()}\n` +
+          `Multiplikator: **${mult}x** → Gewinn: **${config.currencySymbol}${Math.floor(amount * mult).toLocaleString()}**\n` +
+          `Schreibe \`stop\` zum Auscashen!`
+        )
+        .setFooter({ text: '45s Zeit | 7 Minen versteckt' })
+        .setTimestamp();
 
-        const idx = parseInt(interaction.customId.split('_')[1]);
+      interaction.update({ embeds: [embed], components: buildButtons() });
+    });
 
-        if (mines.has(idx)) {
-          gameOver = true;
-          btnCollector.stop('boom');
-          msgCollector.stop();
-
-          db.updateBalance(userId, -amount);
-
-          const embed = new EmbedBuilder()
-            .setColor('#e74c3c')
-            .setTitle('💥 BOOM! Mine getroffen!')
-            .setDescription(
-              `${buildRevealedGrid()}\n` +
-              `Du hast eine Mine getroffen!\n` +
-              `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`
-            )
-            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-            .setTimestamp();
-
-          interaction.update({ embeds: [embed], components: [] });
-          return;
-        }
-
-        revealed.add(idx);
-        const safeLeft = GRID_SIZE * GRID_SIZE - MINE_COUNT - revealed.size;
-
-        if (safeLeft === 0) {
-          gameOver = true;
-          btnCollector.stop('cleared');
-          msgCollector.stop();
-
+    btnCollector.on('end', (_, reason) => {
+      msgCollector.stop();
+      if (reason === 'time' && !gameOver) {
+        gameOver = true;
+        if (revealed.size > 0) {
           const mult = getMultiplier();
           const winAmount = Math.floor(amount * mult);
           const profit = winAmount - amount;
           db.updateBalance(userId, profit);
 
           const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle('🏆 ALLE FELDER GESCHAFFT!')
+            .setColor('#f39c12')
+            .setTitle('⏰ Zeit abgelaufen — Auto-Cashout')
             .setDescription(
               `${buildRevealedGrid()}\n` +
-              `Unglaublich! Alle sicheren Felder aufgedeckt!\n` +
-              `Multiplikator: **${mult}x**\n` +
+              `**${revealed.size}** Felder aufgedeckt — **${mult}x**\n` +
               `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`
             )
             .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
             .setTimestamp();
 
-          interaction.update({ embeds: [embed], components: [] });
-          return;
+          msg.edit({ embeds: [embed], components: [] });
+        } else {
+          db.updateBalance(userId, -amount);
+          const embed = new EmbedBuilder()
+            .setColor('#e74c3c')
+            .setTitle('⏰ Zeit abgelaufen')
+            .setDescription(`Du hast kein Feld aufgedeckt!\nVerlust: **-${config.currencySymbol}${amount.toLocaleString()}**`)
+            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+            .setTimestamp();
+
+          msg.edit({ embeds: [embed], components: [] });
         }
-
-        const mult = getMultiplier();
-        const embed = new EmbedBuilder()
-          .setColor('#3498db')
-          .setTitle('💣 Minenfeld')
-          .setDescription(
-            `Einsatz: **${config.currencySymbol}${amount.toLocaleString()}**\n` +
-            `Aufgedeckt: **${revealed.size}** | Noch sicher: **${safeLeft}**\n\n` +
-            `${buildGrid()}\n` +
-            `Multiplikator: **${mult}x** → Gewinn: **${config.currencySymbol}${Math.floor(amount * mult).toLocaleString()}**\n` +
-            `Schreibe \`stop\` zum Auscashen!`
-          )
-          .setFooter({ text: '45s Zeit | 7 Minen versteckt' })
-          .setTimestamp();
-
-        interaction.update({ embeds: [embed], components: buildButtons() });
-      });
-
-      btnCollector.on('end', (_, reason) => {
-        msgCollector.stop();
-        if (reason === 'time' && !gameOver) {
-          gameOver = true;
-          if (revealed.size > 0) {
-            const mult = getMultiplier();
-            const winAmount = Math.floor(amount * mult);
-            const profit = winAmount - amount;
-            db.updateBalance(userId, profit);
-
-            const embed = new EmbedBuilder()
-              .setColor('#f39c12')
-              .setTitle('⏰ Zeit abgelaufen — Auto-Cashout')
-              .setDescription(
-                `${buildRevealedGrid()}\n` +
-                `**${revealed.size}** Felder aufgedeckt — **${mult}x**\n` +
-                `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**`
-              )
-              .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-              .setTimestamp();
-
-            msg.edit({ embeds: [embed], components: [] });
-          } else {
-            db.updateBalance(userId, -amount);
-            const embed = new EmbedBuilder()
-              .setColor('#e74c3c')
-              .setTitle('⏰ Zeit abgelaufen')
-              .setDescription(`Du hast kein Feld aufgedeckt!\nVerlust: **-${config.currencySymbol}${amount.toLocaleString()}**`)
-              .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-              .setTimestamp();
-
-            msg.edit({ embeds: [embed], components: [] });
-          }
-        }
-      });
+      }
     });
   },
 };

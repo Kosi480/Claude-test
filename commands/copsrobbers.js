@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const scenarios = [
@@ -28,17 +28,17 @@ const COOLDOWN = 3 * 60 * 1000;
 const cooldowns = new Map();
 
 module.exports = {
-  name: 'copsrobbers',
-  aliases: ['cr', 'polizei', 'flucht'],
-  description: 'Räuber vs Polizei — Wähle deine Fluchtroute! (3min CD)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('copsrobbers')
+    .setDescription('Räuber vs Polizei — Wähle deine Fluchtroute! (3min CD)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
     const lastPlay = cooldowns.get(userId);
     if (lastPlay && Date.now() - lastPlay < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastPlay)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
     cooldowns.set(userId, Date.now());
@@ -62,50 +62,49 @@ module.exports = {
       .setFooter({ text: '15 Sekunden Zeit!' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed], components: [row] }).then(msg => {
-      const collector = msg.createMessageComponentCollector({ time: 15000 });
+    const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+    const collector = msg.createMessageComponentCollector({ time: 15000 });
 
-      collector.on('collect', (interaction) => {
-        if (interaction.user.id !== userId) {
-          return interaction.reply({ content: '❌ Das ist nicht dein Spiel!', flags: 64 });
-        }
+    collector.on('collect', (btnInteraction) => {
+      if (btnInteraction.user.id !== userId) {
+        return btnInteraction.reply({ content: '❌ Das ist nicht dein Spiel!', flags: 64 });
+      }
 
-        collector.stop();
-        const idx = parseInt(interaction.customId.split('_')[1]);
-        const option = scenario.options[idx];
-        const success = Math.random() < option.successChance;
+      collector.stop();
+      const idx = parseInt(btnInteraction.customId.split('_')[1]);
+      const option = scenario.options[idx];
+      const success = Math.random() < option.successChance;
 
-        if (success) {
-          db.updateBalance(userId, option.reward);
-          const embed = new EmbedBuilder()
-            .setColor('#2ecc71')
-            .setTitle('🏃 Entkommen!')
-            .setDescription(
-              `${option.emoji} **${option.label}** — Erfolg!\n\n` +
-              `Du bist entkommen und hast **${config.currencySymbol}${option.reward}** erbeutet!`
-            )
-            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-            .setTimestamp();
-          interaction.update({ embeds: [embed], components: [] });
-        } else {
-          const actualFine = Math.min(option.fail, db.getBalance(userId));
-          db.updateBalance(userId, -actualFine);
-          const embed = new EmbedBuilder()
-            .setColor('#e74c3c')
-            .setTitle('🚔 Geschnappt!')
-            .setDescription(
-              `${option.emoji} **${option.label}** — Fehlgeschlagen!\n\n` +
-              `Die Polizei hat dich erwischt! Strafe: **${config.currencySymbol}${actualFine}**`
-            )
-            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-            .setTimestamp();
-          interaction.update({ embeds: [embed], components: [] });
-        }
-      });
+      if (success) {
+        db.updateBalance(userId, option.reward);
+        const embed = new EmbedBuilder()
+          .setColor('#2ecc71')
+          .setTitle('🏃 Entkommen!')
+          .setDescription(
+            `${option.emoji} **${option.label}** — Erfolg!\n\n` +
+            `Du bist entkommen und hast **${config.currencySymbol}${option.reward}** erbeutet!`
+          )
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+          .setTimestamp();
+        btnInteraction.update({ embeds: [embed], components: [] });
+      } else {
+        const actualFine = Math.min(option.fail, db.getBalance(userId));
+        db.updateBalance(userId, -actualFine);
+        const embed = new EmbedBuilder()
+          .setColor('#e74c3c')
+          .setTitle('🚔 Geschnappt!')
+          .setDescription(
+            `${option.emoji} **${option.label}** — Fehlgeschlagen!\n\n` +
+            `Die Polizei hat dich erwischt! Strafe: **${config.currencySymbol}${actualFine}**`
+          )
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+          .setTimestamp();
+        btnInteraction.update({ embeds: [embed], components: [] });
+      }
+    });
 
-      collector.on('end', (_, reason) => {
-        if (reason === 'time') msg.edit({ components: [] });
-      });
+    collector.on('end', (_, reason) => {
+      if (reason === 'time') msg.edit({ components: [] });
     });
   },
 };

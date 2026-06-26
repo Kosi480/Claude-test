@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const quests = [
@@ -50,29 +50,38 @@ function trackProgress(userId, type) {
 }
 
 module.exports = {
-  name: 'quest',
-  aliases: ['quests', 'auftrag', 'aufträge', 'mission'],
-  description: 'Zeige deine Quests oder hole neue (!quest / !quest new)',
+  data: new SlashCommandBuilder()
+    .setName('quest')
+    .setDescription('Zeige deine Quests oder hole neue')
+    .addSubcommand(sub =>
+      sub.setName('list')
+        .setDescription('Zeige deine aktiven Quests'))
+    .addSubcommand(sub =>
+      sub.setName('new')
+        .setDescription('Hole einen neuen Auftrag'))
+    .addSubcommand(sub =>
+      sub.setName('claim')
+        .setDescription('Hole Belohnungen fuer abgeschlossene Quests ab')),
   trackProgress,
-  execute(message, args) {
-    const userId = message.author.id;
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-    const action = (args[0] || 'list').toLowerCase();
+    const action = interaction.options.getSubcommand();
 
-    if (action === 'new' || action === 'neu') {
+    if (action === 'new') {
       const lastQuest = questCooldowns.get(userId);
       if (lastQuest && Date.now() - lastQuest < QUEST_COOLDOWN) {
         const remaining = Math.ceil((QUEST_COOLDOWN - (Date.now() - lastQuest)) / 60000);
-        return message.reply(`⏳ Du kannst in **${remaining} Minuten** einen neuen Auftrag holen!`);
+        return await interaction.reply(`⏳ Du kannst in **${remaining} Minuten** einen neuen Auftrag holen!`);
       }
 
       const playerQuests = getPlayerQuests(userId);
       if (playerQuests.length >= 3) {
-        return message.reply('❌ Du hast bereits 3 aktive Quests! Schließe erst welche ab.');
+        return await interaction.reply('❌ Du hast bereits 3 aktive Quests! Schließe erst welche ab.');
       }
 
       const quest = assignRandomQuest(userId);
-      if (!quest) return message.reply('❌ Keine neuen Quests verfügbar!');
+      if (!quest) return await interaction.reply('❌ Keine neuen Quests verfügbar!');
 
       questCooldowns.set(userId, Date.now());
 
@@ -86,14 +95,14 @@ module.exports = {
         )
         .setTimestamp();
 
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
-    if (action === 'claim' || action === 'abholen') {
+    if (action === 'claim') {
       const playerQuests = getPlayerQuests(userId);
       const completed = playerQuests.filter(q => q.progress >= q.goal);
 
-      if (!completed.length) return message.reply('❌ Du hast keine abgeschlossenen Quests!');
+      if (!completed.length) return await interaction.reply('❌ Du hast keine abgeschlossenen Quests!');
 
       let totalReward = 0;
       const claimed = [];
@@ -116,13 +125,14 @@ module.exports = {
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
+    // list subcommand
     const playerQuests = getPlayerQuests(userId);
 
     if (!playerQuests.length) {
-      return message.reply(`📜 Du hast keine aktiven Quests! Hole dir welche mit \`${config.prefix}quest new\``);
+      return await interaction.reply('📜 Du hast keine aktiven Quests! Hole dir welche mit `/quest new`');
     }
 
     const embed = new EmbedBuilder()
@@ -135,10 +145,10 @@ module.exports = {
           return `${q.emoji} **${q.name}**${done}\n${q.desc}\n${bar} (${q.progress}/${q.goal}) — ${config.currencySymbol}${q.reward}`;
         }).join('\n\n')
       )
-      .setFooter({ text: `${config.prefix}quest claim — Abgeschlossene abholen | ${config.prefix}quest new — Neuer Auftrag` })
+      .setFooter({ text: `/quest claim — Abgeschlossene abholen | /quest new — Neuer Auftrag` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };
 

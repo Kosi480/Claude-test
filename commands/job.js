@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const careers = [
@@ -87,15 +87,34 @@ function getCareerLevel(career, shiftsWorked) {
 }
 
 module.exports = {
-  name: 'job',
-  aliases: ['beruf', 'karriere', 'career'],
-  description: 'Wähle einen Beruf und steige auf (!job, !job list, !job apply, !job work, !job quit)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('job')
+    .setDescription('Wähle einen Beruf und steige auf')
+    .addSubcommand(sub =>
+      sub.setName('info')
+        .setDescription('Zeige deinen aktuellen Job'))
+    .addSubcommand(sub =>
+      sub.setName('list')
+        .setDescription('Zeige alle verfuegbaren Berufe'))
+    .addSubcommand(sub =>
+      sub.setName('apply')
+        .setDescription('Bewirb dich fuer einen Beruf')
+        .addStringOption(opt =>
+          opt.setName('beruf')
+            .setDescription('Name des Berufs')
+            .setRequired(true)))
+    .addSubcommand(sub =>
+      sub.setName('work')
+        .setDescription('Arbeite eine Schicht'))
+    .addSubcommand(sub =>
+      sub.setName('quit')
+        .setDescription('Kuendige deinen Job')),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-    const action = (args[0] || 'info').toLowerCase();
+    const action = interaction.options.getSubcommand();
 
-    if (action === 'list' || action === 'liste' || action === 'berufe') {
+    if (action === 'list') {
       const lines = careers.map(c => {
         const maxPay = c.levels[c.levels.length - 1].pay[1];
         return `${c.emoji} **${c.name}**\n┗ ${c.levels.map(l => l.title).join(' → ')}\n┗ Max: ${config.currencySymbol}${maxPay}/Schicht`;
@@ -105,20 +124,20 @@ module.exports = {
         .setColor('#3498db')
         .setTitle('📋 Verfügbare Berufe')
         .setDescription(lines.join('\n\n'))
-        .setFooter({ text: `${config.prefix}job apply <Beruf> zum Bewerben` })
+        .setFooter({ text: `/job apply zum Bewerben` })
         .setTimestamp();
 
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
-    if (action === 'apply' || action === 'bewerben') {
+    if (action === 'apply') {
       const existing = getJob(userId);
-      if (existing) return message.reply(`❌ Du arbeitest bereits als **${existing.career}**! Kündige zuerst mit \`${config.prefix}job quit\``);
+      if (existing) return await interaction.reply(`❌ Du arbeitest bereits als **${existing.career}**! Kündige zuerst mit \`/job quit\``);
 
-      const careerName = args.slice(1).join(' ');
+      const careerName = interaction.options.getString('beruf');
       const career = careers.find(c => c.name.toLowerCase() === careerName.toLowerCase());
       if (!career) {
-        return message.reply(`❌ Beruf nicht gefunden! Nutze \`${config.prefix}job list\``);
+        return await interaction.reply('❌ Beruf nicht gefunden! Nutze `/job list`');
       }
 
       db.db.prepare('INSERT OR REPLACE INTO jobs (user_id, career, shifts_worked) VALUES (?, ?, 0)').run(userId, career.name);
@@ -129,19 +148,19 @@ module.exports = {
         .setTitle(`${career.emoji} Job angenommen!`)
         .setDescription(
           `Du bist jetzt **${career.levels[0].title}** bei **${career.name}**!\n\n` +
-          `Nutze \`${config.prefix}job work\` um Schichten zu arbeiten und aufzusteigen!`
+          `Nutze \`/job work\` um Schichten zu arbeiten und aufzusteigen!`
         )
         .setTimestamp();
 
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
-    if (action === 'work' || action === 'schicht') {
+    if (action === 'work') {
       const job = getJob(userId);
-      if (!job) return message.reply(`❌ Du hast keinen Job! Bewirb dich mit \`${config.prefix}job apply <Beruf>\``);
+      if (!job) return await interaction.reply('❌ Du hast keinen Job! Bewirb dich mit `/job apply`');
 
       const info = getCareerLevel(job.career, job.shifts_worked);
-      if (!info) return message.reply('❌ Fehler beim Laden deines Jobs!');
+      if (!info) return await interaction.reply('❌ Fehler beim Laden deines Jobs!');
 
       const pay = Math.floor(Math.random() * (info.level.pay[1] - info.level.pay[0] + 1)) + info.level.pay[0];
 
@@ -178,24 +197,25 @@ module.exports = {
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
       return;
     }
 
-    if (action === 'quit' || action === 'kündigen') {
+    if (action === 'quit') {
       const job = getJob(userId);
-      if (!job) return message.reply('❌ Du hast keinen Job!');
+      if (!job) return await interaction.reply('❌ Du hast keinen Job!');
 
       db.db.prepare('DELETE FROM jobs WHERE user_id = ?').run(userId);
       playerJobs.delete(userId);
 
-      message.reply(`✅ Du hast als **${job.career}** gekündigt. (${job.shifts_worked} Schichten gearbeitet)`);
+      await interaction.reply(`✅ Du hast als **${job.career}** gekündigt. (${job.shifts_worked} Schichten gearbeitet)`);
       return;
     }
 
+    // info subcommand
     const job = getJob(userId);
     if (!job) {
-      return message.reply(`❌ Du hast keinen Job! Nutze \`${config.prefix}job list\` und \`${config.prefix}job apply <Beruf>\``);
+      return await interaction.reply('❌ Du hast keinen Job! Nutze `/job list` und `/job apply`');
     }
 
     const info = getCareerLevel(job.career, job.shifts_worked);
@@ -219,6 +239,6 @@ module.exports = {
       )
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

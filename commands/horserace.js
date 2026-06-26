@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const horses = [
@@ -14,30 +14,30 @@ const COOLDOWN = 45 * 1000;
 const cooldowns = new Map();
 
 module.exports = {
-  name: 'horserace',
-  aliases: ['pferde', 'rennen', 'hr'],
-  description: 'Wette auf ein Pferd im Rennen! (!horserace <Betrag>, 45s CD)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('horserace')
+    .setDescription('Wette auf ein Pferd im Rennen! (45s Cooldown)')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}horserace <Betrag>\``);
 
     const lastPlay = cooldowns.get(userId);
     if (lastPlay && Date.now() - lastPlay < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastPlay)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Ungültiger Betrag!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
     const rows = [];
     const row1 = new ActionRowBuilder();
@@ -70,111 +70,110 @@ module.exports = {
       .setFooter({ text: '15s zum Wählen' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed], components: rows }).then(msg => {
-      const collector = msg.createMessageComponentCollector({ time: 15000 });
+    const msg = await interaction.reply({ embeds: [embed], components: rows, fetchReply: true });
+    const collector = msg.createMessageComponentCollector({ time: 15000 });
 
-      collector.on('collect', (interaction) => {
-        if (interaction.user.id !== userId) {
-          return interaction.reply({ content: '❌ Das ist nicht dein Rennen!', flags: 64 });
-        }
+    collector.on('collect', (interaction) => {
+      if (interaction.user.id !== userId) {
+        return interaction.reply({ content: '❌ Das ist nicht dein Rennen!', flags: 64 });
+      }
 
-        collector.stop();
-        cooldowns.set(userId, Date.now());
+      collector.stop();
+      cooldowns.set(userId, Date.now());
 
-        const chosenIdx = parseInt(interaction.customId.split('_')[1]);
-        const chosenHorse = horses[chosenIdx];
-        const odds = parseFloat((2.5 / chosenHorse.speed).toFixed(1));
+      const chosenIdx = parseInt(interaction.customId.split('_')[1]);
+      const chosenHorse = horses[chosenIdx];
+      const odds = parseFloat((2.5 / chosenHorse.speed).toFixed(1));
 
-        const positions = horses.map(() => 0);
+      const positions = horses.map(() => 0);
 
-        const buildTrack = () => {
-          return horses.map((h, i) => {
-            const pos = positions[i];
-            const trail = '▓'.repeat(pos);
-            const remaining = '░'.repeat(Math.max(TRACK_LENGTH - pos, 0));
-            const marker = i === chosenIdx ? '⭐' : '';
-            return `${h.color} \`${trail}${h.emoji}${remaining}\` ${marker}`;
-          }).join('\n');
-        };
+      const buildTrack = () => {
+        return horses.map((h, i) => {
+          const pos = positions[i];
+          const trail = '▓'.repeat(pos);
+          const remaining = '░'.repeat(Math.max(TRACK_LENGTH - pos, 0));
+          const marker = i === chosenIdx ? '⭐' : '';
+          return `${h.color} \`${trail}${h.emoji}${remaining}\` ${marker}`;
+        }).join('\n');
+      };
 
-        const raceEmbed = new EmbedBuilder()
-          .setColor('#f39c12')
-          .setTitle('🏇 Das Rennen beginnt!')
-          .setDescription(
-            `Dein Pferd: ${chosenHorse.color} **${chosenHorse.name}** (${odds}x)\n\n${buildTrack()}`
-          )
-          .setTimestamp();
+      const raceEmbed = new EmbedBuilder()
+        .setColor('#f39c12')
+        .setTitle('🏇 Das Rennen beginnt!')
+        .setDescription(
+          `Dein Pferd: ${chosenHorse.color} **${chosenHorse.name}** (${odds}x)\n\n${buildTrack()}`
+        )
+        .setTimestamp();
 
-        interaction.update({ embeds: [raceEmbed], components: [] }).then(() => {
-          let tick = 0;
-          const interval = setInterval(() => {
-            tick++;
-            let winner = -1;
+      interaction.update({ embeds: [raceEmbed], components: [] }).then(() => {
+        let tick = 0;
+        const interval = setInterval(() => {
+          tick++;
+          let winner = -1;
 
-            for (let i = 0; i < horses.length; i++) {
-              const advance = Math.random() * 2.5 * horses[i].speed;
-              positions[i] = Math.min(positions[i] + Math.floor(advance + 0.5), TRACK_LENGTH);
-              if (positions[i] >= TRACK_LENGTH && winner === -1) {
-                winner = i;
+          for (let i = 0; i < horses.length; i++) {
+            const advance = Math.random() * 2.5 * horses[i].speed;
+            positions[i] = Math.min(positions[i] + Math.floor(advance + 0.5), TRACK_LENGTH);
+            if (positions[i] >= TRACK_LENGTH && winner === -1) {
+              winner = i;
+            }
+          }
+
+          if (winner !== -1 || tick >= 20) {
+            clearInterval(interval);
+
+            if (winner === -1) {
+              let maxPos = 0;
+              for (let i = 0; i < positions.length; i++) {
+                if (positions[i] > maxPos) { maxPos = positions[i]; winner = i; }
               }
             }
 
-            if (winner !== -1 || tick >= 20) {
-              clearInterval(interval);
+            const winHorse = horses[winner];
+            const won = winner === chosenIdx;
 
-              if (winner === -1) {
-                let maxPos = 0;
-                for (let i = 0; i < positions.length; i++) {
-                  if (positions[i] > maxPos) { maxPos = positions[i]; winner = i; }
-                }
-              }
-
-              const winHorse = horses[winner];
-              const won = winner === chosenIdx;
-
-              let resultText, color;
-              if (won) {
-                const winAmount = Math.floor(amount * odds);
-                const profit = winAmount - amount;
-                db.updateBalance(userId, profit);
-                resultText = `${winHorse.color} **${winHorse.name}** gewinnt!\n\n` +
-                  `Du hast gewonnen! **+${config.currencySymbol}${profit.toLocaleString()}**`;
-                color = '#2ecc71';
-              } else {
-                db.updateBalance(userId, -amount);
-                resultText = `${winHorse.color} **${winHorse.name}** gewinnt!\n\n` +
-                  `Dein Pferd ${chosenHorse.color} **${chosenHorse.name}** hat verloren.\n` +
-                  `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`;
-                color = '#e74c3c';
-              }
-
-              const embed = new EmbedBuilder()
-                .setColor(color)
-                .setTitle('🏇 Rennergebnis')
-                .setDescription(`${buildTrack()}\n\n${resultText}`)
-                .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-                .setTimestamp();
-
-              msg.edit({ embeds: [embed] });
-              return;
+            let resultText, color;
+            if (won) {
+              const winAmount = Math.floor(amount * odds);
+              const profit = winAmount - amount;
+              db.updateBalance(userId, profit);
+              resultText = `${winHorse.color} **${winHorse.name}** gewinnt!\n\n` +
+                `Du hast gewonnen! **+${config.currencySymbol}${profit.toLocaleString()}**`;
+              color = '#2ecc71';
+            } else {
+              db.updateBalance(userId, -amount);
+              resultText = `${winHorse.color} **${winHorse.name}** gewinnt!\n\n` +
+                `Dein Pferd ${chosenHorse.color} **${chosenHorse.name}** hat verloren.\n` +
+                `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`;
+              color = '#e74c3c';
             }
 
             const embed = new EmbedBuilder()
-              .setColor('#f39c12')
-              .setTitle('🏇 Rennen läuft...')
-              .setDescription(
-                `Dein Pferd: ${chosenHorse.color} **${chosenHorse.name}** (${odds}x)\n\n${buildTrack()}`
-              )
+              .setColor(color)
+              .setTitle('🏇 Rennergebnis')
+              .setDescription(`${buildTrack()}\n\n${resultText}`)
+              .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
               .setTimestamp();
 
-            msg.edit({ embeds: [embed] }).catch(() => {});
-          }, 1800);
-        });
-      });
+            msg.edit({ embeds: [embed] });
+            return;
+          }
 
-      collector.on('end', (_, reason) => {
-        if (reason === 'time') msg.edit({ components: [] });
+          const embed = new EmbedBuilder()
+            .setColor('#f39c12')
+            .setTitle('🏇 Rennen läuft...')
+            .setDescription(
+              `Dein Pferd: ${chosenHorse.color} **${chosenHorse.name}** (${odds}x)\n\n${buildTrack()}`
+            )
+            .setTimestamp();
+
+          msg.edit({ embeds: [embed] }).catch(() => {});
+        }, 1800);
       });
+    });
+
+    collector.on('end', (_, reason) => {
+      if (reason === 'time') msg.edit({ components: [] });
     });
   },
 };

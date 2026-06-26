@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const COOLDOWN = 60 * 1000;
@@ -18,17 +18,17 @@ const wordSets = [
 ];
 
 module.exports = {
-  name: 'wortjagd',
-  aliases: ['wordhunt', 'wj', 'buchstaben'],
-  description: 'Finde Wörter aus den Buchstaben! (60s CD)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('wortjagd')
+    .setDescription('Finde Wörter aus den Buchstaben! (60s CD)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
     const lastPlay = cooldowns.get(userId);
     if (lastPlay && Date.now() - lastPlay < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastPlay)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
     cooldowns.set(userId, Date.now());
@@ -50,83 +50,82 @@ module.exports = {
       .setFooter({ text: '30 Sekunden Zeit!' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] }).then(msg => {
-      const collector = message.channel.createMessageCollector({
-        filter: m => m.author.id === userId,
-        time: 30000,
-      });
+    const msg = await interaction.reply({ embeds: [embed], fetchReply: true });
+    const collector = interaction.channel.createMessageCollector({
+      filter: m => m.author.id === userId,
+      time: 30000,
+    });
 
-      collector.on('collect', (m) => {
-        const guess = m.content.toLowerCase().trim();
+    collector.on('collect', (m) => {
+      const guess = m.content.toLowerCase().trim();
 
-        if (guess.length < 3) return;
+      if (guess.length < 3) return;
 
-        if (uniqueWords.includes(guess) && !foundWords.has(guess)) {
-          foundWords.add(guess);
-          m.react('✅').catch(() => {});
+      if (uniqueWords.includes(guess) && !foundWords.has(guess)) {
+        foundWords.add(guess);
+        m.react('✅').catch(() => {});
 
-          if (foundWords.size >= uniqueWords.length) {
-            collector.stop('allFound');
-          }
-        } else if (foundWords.has(guess)) {
-          m.react('🔄').catch(() => {});
-        } else {
-          m.react('❌').catch(() => {});
+        if (foundWords.size >= uniqueWords.length) {
+          collector.stop('allFound');
         }
-      });
+      } else if (foundWords.has(guess)) {
+        m.react('🔄').catch(() => {});
+      } else {
+        m.react('❌').catch(() => {});
+      }
+    });
 
-      collector.on('end', (_, reason) => {
-        const count = foundWords.size;
-        let reward, tier, color;
+    collector.on('end', (_, reason) => {
+      const count = foundWords.size;
+      let reward, tier, color;
 
-        if (count >= uniqueWords.length) {
-          reward = 1000;
-          tier = 'PERFEKT';
-          color = '#FFD700';
-        } else if (count >= 7) {
-          reward = 600;
-          tier = 'Ausgezeichnet';
-          color = '#2ecc71';
-        } else if (count >= 5) {
-          reward = 400;
-          tier = 'Sehr gut';
-          color = '#3498db';
-        } else if (count >= 3) {
-          reward = 200;
-          tier = 'Gut';
-          color = '#f39c12';
-        } else if (count >= 1) {
-          reward = 75;
-          tier = 'OK';
-          color = '#e67e22';
-        } else {
-          reward = 0;
-          tier = 'Nichts gefunden';
-          color = '#e74c3c';
-        }
+      if (count >= uniqueWords.length) {
+        reward = 1000;
+        tier = 'PERFEKT';
+        color = '#FFD700';
+      } else if (count >= 7) {
+        reward = 600;
+        tier = 'Ausgezeichnet';
+        color = '#2ecc71';
+      } else if (count >= 5) {
+        reward = 400;
+        tier = 'Sehr gut';
+        color = '#3498db';
+      } else if (count >= 3) {
+        reward = 200;
+        tier = 'Gut';
+        color = '#f39c12';
+      } else if (count >= 1) {
+        reward = 75;
+        tier = 'OK';
+        color = '#e67e22';
+      } else {
+        reward = 0;
+        tier = 'Nichts gefunden';
+        color = '#e74c3c';
+      }
 
-        if (reward > 0) db.updateBalance(userId, reward);
+      if (reward > 0) db.updateBalance(userId, reward);
 
-        const missedWords = uniqueWords.filter(w => !foundWords.has(w));
+      const missedWords = uniqueWords.filter(w => !foundWords.has(w));
 
-        const resultEmbed = new EmbedBuilder()
-          .setColor(color)
-          .setTitle(`📝 Wortjagd — ${tier}!`)
-          .setDescription(
-            `Buchstaben: **\` ${wordSet.letters} \`**\n\n` +
-            `Gefunden: **${count}/${uniqueWords.length}**\n` +
-            (count > 0 ? `Deine Wörter: ${[...foundWords].join(', ')}\n` : '') +
-            (missedWords.length > 0 ? `Verpasst: ||${missedWords.join(', ')}||\n` : '') +
-            `\n` +
-            (reward > 0
-              ? `Belohnung: **+${config.currencySymbol}${reward}**`
-              : `Keine Belohnung.`)
-          )
-          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-          .setTimestamp();
+      const resultEmbed = new EmbedBuilder()
+        .setColor(color)
+        .setTitle(`📝 Wortjagd — ${tier}!`)
+        .setDescription(
+          `Buchstaben: **\` ${wordSet.letters} \`**\n\n` +
+          `Gefunden: **${count}/${uniqueWords.length}**\n` +
+          (count > 0 ? `Deine Wörter: ${[...foundWords].join(', ')}\n` : '') +
+          (missedWords.length > 0 ? `Verpasst: ||${missedWords.join(', ')}||\n` : '') +
+          `\n` +
+          (reward > 0
+            ? `Belohnung: **+${config.currencySymbol}${reward}**`
+            : `Keine Belohnung.`)
+        )
+        .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+        .setTimestamp();
 
-        msg.edit({ embeds: [resultEmbed] });
-      });
+      msg.edit({ embeds: [resultEmbed] });
     });
   },
 };

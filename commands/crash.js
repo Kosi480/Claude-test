@@ -1,34 +1,34 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const COOLDOWN = 30 * 1000;
 const cooldowns = new Map();
 
 module.exports = {
-  name: 'crash',
-  aliases: ['rakete', 'rocket'],
-  description: 'Crash-Spiel — Cashe aus bevor die Rakete abstürzt! (!crash <Betrag>, 30s CD)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('crash')
+    .setDescription('Crash-Spiel — Cashe aus bevor die Rakete abstürzt! (30s CD)')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}crash <Betrag>\``);
 
     const lastPlay = cooldowns.get(userId);
     if (lastPlay && Date.now() - lastPlay < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastPlay)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Ungültiger Betrag!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Ungültiger Betrag!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
     cooldowns.set(userId, Date.now());
 
@@ -58,93 +58,92 @@ module.exports = {
         .setStyle(ButtonStyle.Success)
     );
 
-    message.reply({ embeds: [buildEmbed()], components: [row] }).then(msg => {
-      const collector = msg.createMessageComponentCollector({ time: 30000 });
+    const msg = await interaction.reply({ embeds: [buildEmbed()], components: [row], fetchReply: true });
+    const collector = msg.createMessageComponentCollector({ time: 30000 });
 
-      collector.on('collect', (interaction) => {
-        if (interaction.user.id !== userId) {
-          return interaction.reply({ content: '❌ Das ist nicht dein Spiel!', flags: 64 });
-        }
+    collector.on('collect', (interaction) => {
+      if (interaction.user.id !== userId) {
+        return interaction.reply({ content: '❌ Das ist nicht dein Spiel!', flags: 64 });
+      }
 
-        if (crashed || cashedOut) return;
+      if (crashed || cashedOut) return;
 
-        cashedOut = true;
-        collector.stop('cashout');
+      cashedOut = true;
+      collector.stop('cashout');
 
-        const winAmount = Math.floor(amount * currentMultiplier);
-        const profit = winAmount - amount;
-        db.updateBalance(userId, profit);
+      const winAmount = Math.floor(amount * currentMultiplier);
+      const profit = winAmount - amount;
+      db.updateBalance(userId, profit);
+
+      const embed = new EmbedBuilder()
+        .setColor('#2ecc71')
+        .setTitle('🚀 Ausgecasht!')
+        .setDescription(
+          `${buildBar(currentMultiplier, crashPoint)}\n\n` +
+          `Ausgecasht bei **${currentMultiplier.toFixed(2)}x**!\n` +
+          `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**\n\n` +
+          `Die Rakete wäre bei **${crashPoint.toFixed(2)}x** abgestürzt.`
+        )
+        .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+        .setTimestamp();
+
+      interaction.update({ embeds: [embed], components: [] });
+    });
+
+    let tickCount = 0;
+    const interval = setInterval(() => {
+      if (cashedOut || crashed) {
+        clearInterval(interval);
+        return;
+      }
+
+      tickCount++;
+      currentMultiplier = 1.0 + tickCount * 0.15;
+
+      if (currentMultiplier >= crashPoint) {
+        crashed = true;
+        clearInterval(interval);
+        collector.stop('crashed');
+
+        db.updateBalance(userId, -amount);
 
         const embed = new EmbedBuilder()
-          .setColor('#2ecc71')
-          .setTitle('🚀 Ausgecasht!')
+          .setColor('#e74c3c')
+          .setTitle('💥 Abgestürzt!')
           .setDescription(
-            `${buildBar(currentMultiplier, crashPoint)}\n\n` +
-            `Ausgecasht bei **${currentMultiplier.toFixed(2)}x**!\n` +
-            `Gewinn: **+${config.currencySymbol}${profit.toLocaleString()}**\n\n` +
-            `Die Rakete wäre bei **${crashPoint.toFixed(2)}x** abgestürzt.`
+            `${buildBar(crashPoint, crashPoint)}\n\n` +
+            `Die Rakete ist bei **${crashPoint.toFixed(2)}x** abgestürzt!\n` +
+            `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`
           )
           .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
           .setTimestamp();
 
-        interaction.update({ embeds: [embed], components: [] });
-      });
+        msg.edit({ embeds: [embed], components: [] });
+        return;
+      }
 
-      let tickCount = 0;
-      const interval = setInterval(() => {
-        if (cashedOut || crashed) {
-          clearInterval(interval);
-          return;
-        }
+      const embed = buildEmbed();
+      msg.edit({ embeds: [embed], components: [row] }).catch(() => {});
+    }, 1500);
 
-        tickCount++;
-        currentMultiplier = 1.0 + tickCount * 0.15;
+    collector.on('end', (_, reason) => {
+      clearInterval(interval);
+      if (reason === 'time' && !cashedOut && !crashed) {
+        crashed = true;
+        db.updateBalance(userId, -amount);
 
-        if (currentMultiplier >= crashPoint) {
-          crashed = true;
-          clearInterval(interval);
-          collector.stop('crashed');
+        const embed = new EmbedBuilder()
+          .setColor('#e74c3c')
+          .setTitle('💥 Zeit abgelaufen!')
+          .setDescription(
+            `Du hast nicht rechtzeitig ausgecasht!\n` +
+            `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`
+          )
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+          .setTimestamp();
 
-          db.updateBalance(userId, -amount);
-
-          const embed = new EmbedBuilder()
-            .setColor('#e74c3c')
-            .setTitle('💥 Abgestürzt!')
-            .setDescription(
-              `${buildBar(crashPoint, crashPoint)}\n\n` +
-              `Die Rakete ist bei **${crashPoint.toFixed(2)}x** abgestürzt!\n` +
-              `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`
-            )
-            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-            .setTimestamp();
-
-          msg.edit({ embeds: [embed], components: [] });
-          return;
-        }
-
-        const embed = buildEmbed();
-        msg.edit({ embeds: [embed], components: [row] }).catch(() => {});
-      }, 1500);
-
-      collector.on('end', (_, reason) => {
-        clearInterval(interval);
-        if (reason === 'time' && !cashedOut && !crashed) {
-          crashed = true;
-          db.updateBalance(userId, -amount);
-
-          const embed = new EmbedBuilder()
-            .setColor('#e74c3c')
-            .setTitle('💥 Zeit abgelaufen!')
-            .setDescription(
-              `Du hast nicht rechtzeitig ausgecasht!\n` +
-              `Verlust: **-${config.currencySymbol}${amount.toLocaleString()}**`
-            )
-            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-            .setTimestamp();
-
-          msg.edit({ embeds: [embed], components: [] });
-        }
-      });
+        msg.edit({ embeds: [embed], components: [] });
+      }
     });
   },
 };

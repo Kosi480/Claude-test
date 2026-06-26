@@ -1,32 +1,57 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const activeAuctions = new Map();
 let auctionCounter = 0;
 
 module.exports = {
-  name: 'auction',
-  aliases: ['auktion', 'versteigerung', 'ah'],
-  description: 'Auktionshaus (!auction create/list/bid)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('auction')
+    .setDescription('Auktionshaus - erstelle, biete und liste Auktionen')
+    .addSubcommand(sub =>
+      sub.setName('list')
+        .setDescription('Zeige alle aktiven Auktionen'))
+    .addSubcommand(sub =>
+      sub.setName('create')
+        .setDescription('Erstelle eine neue Auktion')
+        .addStringOption(opt =>
+          opt.setName('item')
+            .setDescription('Der Name des Items')
+            .setRequired(true))
+        .addIntegerOption(opt =>
+          opt.setName('startpreis')
+            .setDescription('Der Startpreis der Auktion')
+            .setRequired(true)))
+    .addSubcommand(sub =>
+      sub.setName('bid')
+        .setDescription('Biete auf eine Auktion')
+        .addIntegerOption(opt =>
+          opt.setName('id')
+            .setDescription('Die Auktions-ID')
+            .setRequired(true))
+        .addIntegerOption(opt =>
+          opt.setName('betrag')
+            .setDescription('Dein Gebot')
+            .setRequired(true))),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
-    const action = (args[0] || 'list').toLowerCase();
+    const action = interaction.options.getSubcommand();
 
-    if (action === 'create' || action === 'erstellen') {
-      const itemName = args.slice(1, -1).join(' ');
-      const startPrice = parseInt(args[args.length - 1]);
+    if (action === 'create') {
+      const itemName = interaction.options.getString('item');
+      const startPrice = interaction.options.getInteger('startpreis');
 
-      if (!itemName || !startPrice || startPrice <= 0) {
-        return message.reply(`❌ Nutzung: \`${config.prefix}auction create <Item> <Startpreis>\``);
+      if (startPrice <= 0) {
+        return await interaction.reply('❌ Der Startpreis muss positiv sein!');
       }
 
       const inventory = db.getInventory(userId);
       const invItem = inventory.find(i => i.item_name.toLowerCase() === itemName.toLowerCase());
-      if (!invItem) return message.reply(`❌ Du hast **${itemName}** nicht im Inventar!`);
+      if (!invItem) return await interaction.reply(`❌ Du hast **${itemName}** nicht im Inventar!`);
 
       if ([...activeAuctions.values()].some(a => a.sellerId === userId)) {
-        return message.reply('❌ Du hast bereits eine aktive Auktion!');
+        return await interaction.reply('❌ Du hast bereits eine aktive Auktion!');
       }
 
       db.removeFromInventory(userId, invItem.item_name);
@@ -39,7 +64,7 @@ module.exports = {
       const auction = {
         id: auctionId,
         sellerId: userId,
-        sellerName: message.author.username,
+        sellerName: interaction.user.username,
         itemName: invItem.item_name,
         emoji,
         startPrice,
@@ -47,7 +72,7 @@ module.exports = {
         highestBidder: null,
         highestBidderName: null,
         endTime: Date.now() + 2 * 60 * 1000,
-        channelId: message.channel.id,
+        channelId: interaction.channel.id,
       };
 
       activeAuctions.set(auctionId, auction);
@@ -56,42 +81,38 @@ module.exports = {
         .setColor('#f39c12')
         .setTitle(`${emoji} Auktion #${auctionId}`)
         .setDescription(
-          `**${message.author.username}** versteigert ${emoji} **${invItem.item_name}**!\n\n` +
+          `**${interaction.user.username}** versteigert ${emoji} **${invItem.item_name}**!\n\n` +
           `Startpreis: **${config.currencySymbol}${startPrice.toLocaleString()}**\n` +
-          `Bieten: \`${config.prefix}auction bid ${auctionId} <Betrag>\`\n\n` +
+          `Bieten: \`/auction bid\`\n\n` +
           `Endet in **2 Minuten**!`
         )
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
 
       setTimeout(() => {
-        endAuction(auctionId, message.client, config);
+        endAuction(auctionId, interaction.client, config);
       }, 2 * 60 * 1000);
 
       return;
     }
 
-    if (action === 'bid' || action === 'bieten') {
-      const auctionId = parseInt(args[1]);
-      const bidAmount = parseInt(args[2]);
-
-      if (!auctionId || !bidAmount) {
-        return message.reply(`❌ Nutzung: \`${config.prefix}auction bid <ID> <Betrag>\``);
-      }
+    if (action === 'bid') {
+      const auctionId = interaction.options.getInteger('id');
+      const bidAmount = interaction.options.getInteger('betrag');
 
       const auction = activeAuctions.get(auctionId);
-      if (!auction) return message.reply('❌ Auktion nicht gefunden oder bereits beendet!');
-      if (auction.sellerId === userId) return message.reply('❌ Du kannst nicht auf deine eigene Auktion bieten!');
-      if (Date.now() > auction.endTime) return message.reply('❌ Diese Auktion ist bereits abgelaufen!');
+      if (!auction) return await interaction.reply('❌ Auktion nicht gefunden oder bereits beendet!');
+      if (auction.sellerId === userId) return await interaction.reply('❌ Du kannst nicht auf deine eigene Auktion bieten!');
+      if (Date.now() > auction.endTime) return await interaction.reply('❌ Diese Auktion ist bereits abgelaufen!');
 
       if (bidAmount <= auction.currentBid) {
-        return message.reply(`❌ Dein Gebot muss höher als **${config.currencySymbol}${auction.currentBid}** sein!`);
+        return await interaction.reply(`❌ Dein Gebot muss höher als **${config.currencySymbol}${auction.currentBid}** sein!`);
       }
 
       const balance = db.getBalance(userId);
       if (balance < bidAmount) {
-        return message.reply(`❌ Du hast nur **${config.currencySymbol}${balance}**!`);
+        return await interaction.reply(`❌ Du hast nur **${config.currencySymbol}${balance}**!`);
       }
 
       if (auction.highestBidder) {
@@ -101,24 +122,24 @@ module.exports = {
       db.updateBalance(userId, -bidAmount);
       auction.currentBid = bidAmount;
       auction.highestBidder = userId;
-      auction.highestBidderName = message.author.username;
+      auction.highestBidderName = interaction.user.username;
 
       const embed = new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle(`${auction.emoji} Auktion #${auctionId} — Neues Gebot!`)
         .setDescription(
-          `**${message.author.username}** bietet **${config.currencySymbol}${bidAmount.toLocaleString()}** auf ${auction.emoji} **${auction.itemName}**!\n\n` +
+          `**${interaction.user.username}** bietet **${config.currencySymbol}${bidAmount.toLocaleString()}** auf ${auction.emoji} **${auction.itemName}**!\n\n` +
           `Aktuelles Höchstgebot: **${config.currencySymbol}${auction.currentBid.toLocaleString()}**`
         )
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
       return;
     }
 
-    if (action === 'list' || action === 'liste') {
+    if (action === 'list') {
       if (activeAuctions.size === 0) {
-        return message.reply(`📋 Keine aktiven Auktionen! Erstelle eine mit \`${config.prefix}auction create <Item> <Startpreis>\``);
+        return await interaction.reply('📋 Keine aktiven Auktionen! Erstelle eine mit `/auction create`');
       }
 
       const lines = [...activeAuctions.values()].map(a => {
@@ -131,14 +152,12 @@ module.exports = {
         .setColor('#f39c12')
         .setTitle('🏛️ Auktionshaus')
         .setDescription(lines.join('\n\n'))
-        .setFooter({ text: `${config.prefix}auction bid <ID> <Betrag> zum Bieten` })
+        .setFooter({ text: `/auction bid zum Bieten` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
       return;
     }
-
-    message.reply(`🏛️ Nutzung:\n\`${config.prefix}auction list\` — Aktive Auktionen\n\`${config.prefix}auction create <Item> <Startpreis>\` — Auktion erstellen\n\`${config.prefix}auction bid <ID> <Betrag>\` — Bieten`);
   },
 };
 

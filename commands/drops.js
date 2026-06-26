@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const dropEvents = [
@@ -126,20 +126,29 @@ function spawnDrop(client, channelId) {
 }
 
 module.exports = {
-  name: 'drops',
-  aliases: ['drop', 'events'],
-  description: 'Aktiviere zufällige Drop-Events in diesem Channel (!drops on/off)',
+  data: new SlashCommandBuilder()
+    .setName('drops')
+    .setDescription('Aktiviere zufaellige Drop-Events in diesem Channel')
+    .addSubcommand(sub =>
+      sub.setName('info')
+        .setDescription('Zeige den Drop-Status fuer diesen Channel'))
+    .addSubcommand(sub =>
+      sub.setName('on')
+        .setDescription('Aktiviere Drop-Events in diesem Channel'))
+    .addSubcommand(sub =>
+      sub.setName('off')
+        .setDescription('Deaktiviere Drop-Events in diesem Channel')),
   scheduleNextDrop,
-  execute(message, args) {
-    const channelId = message.channel.id;
-    const action = (args[0] || 'info').toLowerCase();
+  async execute(interaction) {
+    const channelId = interaction.channel.id;
+    const action = interaction.options.getSubcommand();
 
-    if (action === 'on' || action === 'an' || action === 'start') {
+    if (action === 'on') {
       if (dropTimers.has(channelId)) {
-        return message.reply('❌ Drops sind in diesem Channel bereits aktiv!');
+        return await interaction.reply('❌ Drops sind in diesem Channel bereits aktiv!');
       }
 
-      scheduleNextDrop(message.client, channelId);
+      scheduleNextDrop(interaction.client, channelId);
 
       const embed = new EmbedBuilder()
         .setColor('#2ecc71')
@@ -147,33 +156,34 @@ module.exports = {
         .setDescription('Zufällige Drops erscheinen jetzt alle 3-10 Minuten in diesem Channel!\n\nSei schnell und klicke um Belohnungen einzusammeln!')
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
 
-    } else if (action === 'off' || action === 'aus' || action === 'stop') {
+    } else if (action === 'off') {
       const timer = dropTimers.get(channelId);
-      if (!timer) return message.reply('❌ Drops sind in diesem Channel nicht aktiv!');
+      if (!timer) return await interaction.reply('❌ Drops sind in diesem Channel nicht aktiv!');
 
       clearTimeout(timer);
       dropTimers.delete(channelId);
       activeDrops.delete(channelId);
 
-      message.reply('✅ Drop-Events in diesem Channel deaktiviert.');
+      await interaction.reply('✅ Drop-Events in diesem Channel deaktiviert.');
 
     } else {
+      // info subcommand
       const active = dropTimers.has(channelId);
       const embed = new EmbedBuilder()
         .setColor('#3498db')
         .setTitle('🎁 Drop-Events')
         .setDescription(
           `Status: ${active ? '✅ Aktiv' : '❌ Inaktiv'}\n\n` +
-          `\`!drops on\` — Aktivieren\n` +
-          `\`!drops off\` — Deaktivieren\n\n` +
+          `\`/drops on\` — Aktivieren\n` +
+          `\`/drops off\` — Deaktivieren\n\n` +
           `**Events:**\n` +
           dropEvents.map(e => `${e.title} — $${e.min}-${e.max}`).join('\n')
         )
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     }
   },
 };

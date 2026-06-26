@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const TICKET_PRICE = 100;
@@ -42,31 +42,40 @@ function checkDraw(client, config) {
 }
 
 module.exports = {
-  name: 'lottery',
-  aliases: ['lotto', 'lotterie'],
-  description: 'Kaufe ein Lotterie-Los oder sieh den Jackpot (!lottery buy/info)',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('lottery')
+    .setDescription('Kaufe ein Lotterie-Los oder sieh den Jackpot')
+    .addSubcommand(sub =>
+      sub.setName('info')
+        .setDescription('Zeige den aktuellen Jackpot und Infos'))
+    .addSubcommand(sub =>
+      sub.setName('buy')
+        .setDescription('Kaufe Lotterie-Lose')
+        .addIntegerOption(opt =>
+          opt.setName('anzahl')
+            .setDescription('Anzahl der Lose (max 10)')
+            .setRequired(false))),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
-    checkDraw(message.client, config);
+    checkDraw(interaction.client, config);
 
-    const action = (args[0] || 'info').toLowerCase();
+    const action = interaction.options.getSubcommand();
 
-    if (action === 'buy' || action === 'kaufen') {
-      const ticketCount = parseInt(args[1]) || 1;
+    if (action === 'buy') {
+      const ticketCount = interaction.options.getInteger('anzahl') || 1;
       const totalCost = TICKET_PRICE * ticketCount;
 
-      if (ticketCount > 10) return message.reply('❌ Maximal 10 Lose auf einmal!');
+      if (ticketCount > 10) return await interaction.reply('❌ Maximal 10 Lose auf einmal!');
 
       const balance = db.getBalance(userId);
-      if (balance < totalCost) return message.reply(`❌ Du brauchst **${config.currencySymbol}${totalCost}** für ${ticketCount} Los(e)!`);
+      if (balance < totalCost) return await interaction.reply(`❌ Du brauchst **${config.currencySymbol}${totalCost}** für ${ticketCount} Los(e)!`);
 
       db.updateBalance(userId, -totalCost);
       jackpot += totalCost;
 
-      const currentTickets = participants.get(userId) ? 1 : 0;
-      participants.set(userId, message.channel.id);
+      participants.set(userId, interaction.channel.id);
 
       const embed = new EmbedBuilder()
         .setColor('#9b59b6')
@@ -79,9 +88,10 @@ module.exports = {
         .setFooter({ text: `Ziehung: Alle 5 Minuten (mind. 2 Teilnehmer)` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
 
     } else {
+      // info subcommand
       const timeLeft = Math.max(0, DRAW_INTERVAL - (Date.now() - lastDraw));
       const minutes = Math.floor(timeLeft / 60000);
       const seconds = Math.floor((timeLeft % 60000) / 1000);
@@ -94,10 +104,10 @@ module.exports = {
           { name: '👥 Teilnehmer', value: `${participants.size}`, inline: true },
           { name: '⏰ Nächste Ziehung', value: participants.size < 2 ? 'Mind. 2 Teilnehmer nötig' : `${minutes}m ${seconds}s`, inline: true },
         )
-        .setDescription(`Ticketpreis: **${config.currencySymbol}${TICKET_PRICE}**\nKaufen: \`${config.prefix}lottery buy [Anzahl]\``)
+        .setDescription(`Ticketpreis: **${config.currencySymbol}${TICKET_PRICE}**\nKaufen: \`/lottery buy\``)
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     }
   },
 };

@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const words = [
@@ -41,19 +41,19 @@ function scrambleWord(word) {
 }
 
 module.exports = {
-  name: 'scramble',
-  aliases: ['wortspiel', 'unscramble'],
-  description: 'Entwirre das Wort und verdiene Coins (45s Cooldown)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('scramble')
+    .setDescription('Entwirre das Wort und verdiene Coins (45s Cooldown)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
-    if (activeGames.has(userId)) return message.reply('❌ Du hast bereits ein aktives Wortspiel!');
+    if (activeGames.has(userId)) return interaction.reply('❌ Du hast bereits ein aktives Wortspiel!');
 
     const lastGame = cooldowns.get(userId);
     if (lastGame && Date.now() - lastGame < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastGame)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
     const entry = words[Math.floor(Math.random() * words.length)];
@@ -74,39 +74,39 @@ module.exports = {
       .setFooter({ text: '20 Sekunden Zeit — Schreibe die Antwort in den Chat!' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] }).then(() => {
-      const filter = m => m.author.id === userId;
-      const collector = message.channel.createMessageCollector({ filter, time: 20000 });
+    await interaction.reply({ embeds: [embed] });
 
-      collector.on('collect', (msg) => {
-        if (msg.content.toUpperCase().trim() === entry.word) {
-          collector.stop('correct');
-          activeGames.delete(userId);
-          db.updateBalance(userId, REWARD);
+    const filter = m => m.author.id === userId;
+    const collector = interaction.channel.createMessageCollector({ filter, time: 20000 });
 
-          const embed = new EmbedBuilder()
-            .setColor('#2ecc71')
-            .setTitle('🔤 Richtig!')
-            .setDescription(`**${entry.word}** war korrekt! Du bekommst **${config.currencySymbol}${REWARD}**!`)
-            .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
-            .setTimestamp();
-
-          msg.reply({ embeds: [embed] });
-        }
-      });
-
-      collector.on('end', (_, reason) => {
+    collector.on('collect', (msg) => {
+      if (msg.content.toUpperCase().trim() === entry.word) {
+        collector.stop('correct');
         activeGames.delete(userId);
-        if (reason === 'time') {
-          const embed = new EmbedBuilder()
-            .setColor('#e74c3c')
-            .setTitle('🔤 Zeit abgelaufen!')
-            .setDescription(`Das Wort war: **${entry.word}**`)
-            .setTimestamp();
+        db.updateBalance(userId, REWARD);
 
-          message.channel.send({ embeds: [embed] });
-        }
-      });
+        const embed = new EmbedBuilder()
+          .setColor('#2ecc71')
+          .setTitle('🔤 Richtig!')
+          .setDescription(`**${entry.word}** war korrekt! Du bekommst **${config.currencySymbol}${REWARD}**!`)
+          .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
+          .setTimestamp();
+
+        msg.reply({ embeds: [embed] });
+      }
+    });
+
+    collector.on('end', (_, reason) => {
+      activeGames.delete(userId);
+      if (reason === 'time') {
+        const embed = new EmbedBuilder()
+          .setColor('#e74c3c')
+          .setTitle('🔤 Zeit abgelaufen!')
+          .setDescription(`Das Wort war: **${entry.word}**`)
+          .setTimestamp();
+
+        interaction.channel.send({ embeds: [embed] });
+      }
     });
   },
 };
