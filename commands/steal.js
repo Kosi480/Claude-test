@@ -54,6 +54,7 @@ module.exports = {
 
       db.updateBalance(target.id, -stolen);
       db.updateBalance(userId, stolen);
+      try { require('./achievements').incrementStat(userId, 'steal'); } catch (_) {}
 
       let bountyText = '';
       try {

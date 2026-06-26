@@ -34,6 +34,7 @@ module.exports = {
 
     if (won) {
       db.updateBalance(userId, amount);
+      try { require('./achievements').incrementStat(userId, 'gamble_wins'); } catch (_) {}
     } else {
       db.updateBalance(userId, -amount);
     }
