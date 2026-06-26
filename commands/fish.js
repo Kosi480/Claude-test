@@ -59,6 +59,7 @@ module.exports = {
     }
 
     db.updateBalance(userId, caught.value);
+    try { require('./quest').trackProgress(userId, 'fish'); } catch (_) {}
 
     const embed = new EmbedBuilder()
       .setColor(rarityColors[caught.rarity])

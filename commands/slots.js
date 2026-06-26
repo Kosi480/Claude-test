@@ -32,6 +32,7 @@ module.exports = {
     if (!amount || amount <= 0) return message.reply('❌ Bitte gib einen gültigen Betrag an!');
     if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
+    try { require('./quest').trackProgress(userId, 'gamble'); } catch (_) {}
     const s1 = symbols[Math.floor(Math.random() * symbols.length)];
     const s2 = symbols[Math.floor(Math.random() * symbols.length)];
     const s3 = symbols[Math.floor(Math.random() * symbols.length)];

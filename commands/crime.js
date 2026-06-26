@@ -31,6 +31,7 @@ module.exports = {
 
     const crime = crimes[Math.floor(Math.random() * crimes.length)];
     const success = Math.random() < 0.45;
+    try { require('./quest').trackProgress(userId, 'crime'); } catch (_) {}
 
     if (success) {
       const earned = Math.floor(Math.random() * (crime.max - crime.min + 1)) + crime.min;

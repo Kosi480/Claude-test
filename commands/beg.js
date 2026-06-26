@@ -34,6 +34,7 @@ module.exports = {
     }
 
     cooldowns.set(userId, Date.now());
+    try { require('./quest').trackProgress(userId, 'beg'); } catch (_) {}
 
     const success = Math.random() < 0.65;
 

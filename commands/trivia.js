@@ -46,6 +46,7 @@ module.exports = {
 
     activeQuizzes.add(userId);
     cooldowns.set(userId, Date.now());
+    try { require('./quest').trackProgress(userId, 'trivia'); } catch (_) {}
 
     const row = new ActionRowBuilder().addComponents(
       ...question.answers.map((_, i) =>

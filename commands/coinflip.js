@@ -26,6 +26,7 @@ module.exports = {
       return message.reply('❌ Wähle **kopf** oder **zahl**!');
     }
 
+    try { require('./quest').trackProgress(userId, 'gamble'); } catch (_) {}
     const isHeads = Math.random() < 0.5;
     const result = isHeads ? 'kopf' : 'zahl';
     const userChoseHeads = ['kopf', 'heads'].includes(choice);

@@ -52,6 +52,8 @@ module.exports = {
     db.updateBalance(userId, earned);
     db.setLastWork(userId);
 
+    try { require('./quest').trackProgress(userId, 'work'); } catch (_) {}
+
     const embed = new EmbedBuilder()
       .setColor('#3498db')
       .setTitle('💼 Arbeit')

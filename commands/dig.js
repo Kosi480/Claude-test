@@ -61,6 +61,7 @@ module.exports = {
     if (found.value > 0) {
       db.updateBalance(userId, found.value);
     }
+    try { require('./quest').trackProgress(userId, 'dig'); } catch (_) {}
 
     const embed = new EmbedBuilder()
       .setColor(rarityColors[found.rarity])
