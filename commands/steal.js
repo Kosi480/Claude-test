@@ -55,10 +55,19 @@ module.exports = {
       db.updateBalance(target.id, -stolen);
       db.updateBalance(userId, stolen);
 
+      let bountyText = '';
+      try {
+        const bountyCmd = require('./bounty');
+        const bounty = bountyCmd.claimBounty(target.id, userId);
+        if (bounty) {
+          bountyText = `\n\n🎯 **KOPFGELD KASSIERT!** +**${config.currencySymbol}${bounty.amount}**!`;
+        }
+      } catch (_) {}
+
       const embed = new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle('🦹 Erfolgreicher Diebstahl!')
-        .setDescription(`Du hast **${config.currencySymbol}${stolen}** von **${target.username}** geklaut!`)
+        .setDescription(`Du hast **${config.currencySymbol}${stolen}** von **${target.username}** geklaut!${bountyText}`)
         .setFooter({ text: `Dein Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
