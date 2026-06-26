@@ -1,29 +1,30 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 module.exports = {
-  name: 'coinflip',
-  aliases: ['cf', 'münze', 'flip'],
-  description: 'Wirf eine Münze und wette Geld',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('coinflip')
+    .setDescription('Wirf eine Münze und wette Geld')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true))
+    .addStringOption(opt => opt.setName('seite').setDescription('Kopf oder Zahl').setRequired(false)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}coinflip <Betrag> [kopf/zahl]\``);
-
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Bitte gib einen gültigen Betrag an!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Bitte gib einen gültigen Betrag an!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
-    const choice = (args[1] || 'kopf').toLowerCase();
+    const choice = (interaction.options.getString('seite') || 'kopf').toLowerCase();
     if (!['kopf', 'zahl', 'heads', 'tails'].includes(choice)) {
-      return message.reply('❌ Wähle **kopf** oder **zahl**!');
+      return interaction.reply('❌ Wähle **kopf** oder **zahl**!');
     }
 
     try { require('./quest').trackProgress(userId, 'gamble'); } catch (_) {}
@@ -48,6 +49,6 @@ module.exports = {
       .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

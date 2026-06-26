@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const symbols = ['🍒', '🍋', '🍊', '🍇', '💎', '7️⃣', '🔔'];
@@ -13,24 +13,24 @@ const multipliers = {
 };
 
 module.exports = {
-  name: 'slots',
-  aliases: ['slot', 'automat', 'spielautomat'],
-  description: 'Spiele am Spielautomaten',
-  execute(message, args) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('slots')
+    .setDescription('Spiele am Spielautomaten')
+    .addStringOption(opt => opt.setName('betrag').setDescription('Einsatz (Zahl oder "alles")').setRequired(true)),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
-    if (!args[0]) return message.reply(`❌ Nutzung: \`${config.prefix}slots <Betrag>\``);
-
+    const betragStr = interaction.options.getString('betrag');
     let amount;
-    if (args[0] === 'all' || args[0] === 'alles') {
+    if (betragStr === 'all' || betragStr === 'alles') {
       amount = db.getBalance(userId);
     } else {
-      amount = parseInt(args[0]);
+      amount = parseInt(betragStr);
     }
 
-    if (!amount || amount <= 0) return message.reply('❌ Bitte gib einen gültigen Betrag an!');
-    if (amount > db.getBalance(userId)) return message.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
+    if (!amount || amount <= 0) return interaction.reply('❌ Bitte gib einen gültigen Betrag an!');
+    if (amount > db.getBalance(userId)) return interaction.reply(`❌ Du hast nur **${config.currencySymbol}${db.getBalance(userId)}**!`);
 
     try { require('./quest').trackProgress(userId, 'gamble'); } catch (_) {}
     const s1 = symbols[Math.floor(Math.random() * symbols.length)];
@@ -61,6 +61,6 @@ module.exports = {
       .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

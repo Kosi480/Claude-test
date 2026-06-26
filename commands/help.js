@@ -1,24 +1,24 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
-  name: 'help',
-  aliases: ['hilfe', 'commands', 'befehle'],
-  description: 'Zeigt alle Befehle an',
-  execute(message) {
+  data: new SlashCommandBuilder()
+    .setName('help')
+    .setDescription('Zeigt alle Befehle an'),
+  async execute(interaction) {
     const config = require('../config.json');
-    const commands = message.client.commands;
+    const commands = interaction.client.commands;
 
     const embed = new EmbedBuilder()
       .setColor('#3498db')
       .setTitle('📖 Alle Befehle')
       .setDescription(
         commands.map(cmd =>
-          `\`${config.prefix}${cmd.name}\` — ${cmd.description}`
+          `\`/${cmd.data.name}\` — ${cmd.data.description}`
         ).join('\n')
       )
-      .setFooter({ text: `Prefix: ${config.prefix}` })
+      .setFooter({ text: 'Benutze / um Befehle auszuführen' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

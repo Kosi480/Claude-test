@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const responses = [
@@ -20,17 +20,17 @@ const COOLDOWN = 45 * 1000;
 const cooldowns = new Map();
 
 module.exports = {
-  name: 'beg',
-  aliases: ['betteln', 'bettel'],
-  description: 'Bettle auf der Straße um Geld (45s Cooldown)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('beg')
+    .setDescription('Bettle auf der Strasse um Geld (45s Cooldown)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const config = require('../config.json');
 
     const lastBeg = cooldowns.get(userId);
     if (lastBeg && Date.now() - lastBeg < COOLDOWN) {
       const remaining = Math.ceil((COOLDOWN - (Date.now() - lastBeg)) / 1000);
-      return message.reply(`⏳ Du musst noch **${remaining}s** warten!`);
+      return interaction.reply(`⏳ Du musst noch **${remaining}s** warten!`);
     }
 
     cooldowns.set(userId, Date.now());
@@ -60,7 +60,7 @@ module.exports = {
         .setFooter({ text: `Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     } else {
       const failMsg = failMessages[Math.floor(Math.random() * failMessages.length)];
 
@@ -70,7 +70,7 @@ module.exports = {
         .setDescription(failMsg)
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     }
   },
 };

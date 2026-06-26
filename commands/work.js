@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const jobs = [
@@ -17,11 +17,11 @@ const jobs = [
 const COOLDOWN = 30 * 1000;
 
 module.exports = {
-  name: 'work',
-  aliases: ['arbeiten', 'arbeit'],
-  description: 'Arbeite um Geld zu verdienen (30s Cooldown)',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('work')
+    .setDescription('Arbeite um Geld zu verdienen (30s Cooldown)'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const user = db.getUser(userId);
     const config = require('../config.json');
 
@@ -30,7 +30,7 @@ module.exports = {
       const diff = Date.now() - lastWork.getTime();
       if (diff < COOLDOWN) {
         const remaining = Math.ceil((COOLDOWN - diff) / 1000);
-        return message.reply(`⏳ Du musst noch **${remaining}s** warten, bevor du wieder arbeiten kannst!`);
+        return interaction.reply(`⏳ Du musst noch **${remaining}s** warten, bevor du wieder arbeiten kannst!`);
       }
     }
 
@@ -62,6 +62,6 @@ module.exports = {
       .setFooter({ text: `Neues Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

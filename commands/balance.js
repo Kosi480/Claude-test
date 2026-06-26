@@ -1,12 +1,13 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 module.exports = {
-  name: 'balance',
-  aliases: ['bal', 'geld', 'konto'],
-  description: 'Zeigt dein Guthaben an',
-  execute(message) {
-    const target = message.mentions.users.first() || message.author;
+  data: new SlashCommandBuilder()
+    .setName('balance')
+    .setDescription('Zeigt dein Guthaben an')
+    .addUserOption(opt => opt.setName('user').setDescription('Spieler dessen Guthaben angezeigt werden soll').setRequired(false)),
+  async execute(interaction) {
+    const target = interaction.options.getUser('user') || interaction.user;
     const user = db.getUser(target.id);
     const config = require('../config.json');
 
@@ -21,6 +22,6 @@ module.exports = {
       .setThumbnail(target.displayAvatarURL())
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

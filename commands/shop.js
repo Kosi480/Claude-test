@@ -1,11 +1,11 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 module.exports = {
-  name: 'shop',
-  aliases: ['laden', 'store'],
-  description: 'Zeigt den Shop an',
-  execute(message) {
+  data: new SlashCommandBuilder()
+    .setName('shop')
+    .setDescription('Zeigt den Shop an'),
+  async execute(interaction) {
     const items = db.getShopItems();
     const config = require('../config.json');
 
@@ -15,9 +15,9 @@ module.exports = {
       .setDescription(items.map(item =>
         `${item.emoji} **${item.name}** — ${config.currencySymbol}${item.price.toLocaleString()}\n┗ ${item.description}`
       ).join('\n\n'))
-      .setFooter({ text: `Kaufen: ${config.prefix}buy <Item>` })
+      .setFooter({ text: 'Kaufen: /buy <Item>' })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

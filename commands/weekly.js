@@ -1,15 +1,15 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const COOLDOWN = 7 * 24 * 60 * 60 * 1000;
 const WEEKLY_AMOUNT = 2500;
 
 module.exports = {
-  name: 'weekly',
-  aliases: ['wöchentlich'],
-  description: 'Hole dir deine wöchentliche Belohnung',
-  execute(message) {
-    const userId = message.author.id;
+  data: new SlashCommandBuilder()
+    .setName('weekly')
+    .setDescription('Hole dir deine woechentliche Belohnung'),
+  async execute(interaction) {
+    const userId = interaction.user.id;
     const user = db.getUser(userId);
     const config = require('../config.json');
 
@@ -19,7 +19,7 @@ module.exports = {
       if (diff < COOLDOWN) {
         const days = Math.floor((COOLDOWN - diff) / (1000 * 60 * 60 * 24));
         const hours = Math.floor(((COOLDOWN - diff) % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        return message.reply(`⏳ Du kannst deine wöchentliche Belohnung in **${days}d ${hours}h** wieder abholen!`);
+        return interaction.reply(`⏳ Du kannst deine wöchentliche Belohnung in **${days}d ${hours}h** wieder abholen!`);
       }
     }
 
@@ -33,6 +33,6 @@ module.exports = {
       .setFooter({ text: `Neues Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

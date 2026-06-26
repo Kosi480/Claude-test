@@ -1,19 +1,20 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 
 const COOLDOWN = 60 * 1000;
 
 module.exports = {
-  name: 'steal',
-  aliases: ['klauen', 'rob', 'stehlen'],
-  description: 'Versuche einem anderen Spieler Geld zu klauen (60s Cooldown)',
-  execute(message) {
-    const target = message.mentions.users.first();
-    if (!target) return message.reply('❌ Du musst jemanden erwähnen! `!steal @user`');
-    if (target.id === message.author.id) return message.reply('❌ Du kannst dich nicht selbst beklauen!');
-    if (target.bot) return message.reply('❌ Du kannst keinen Bot beklauen!');
+  data: new SlashCommandBuilder()
+    .setName('steal')
+    .setDescription('Versuche einem anderen Spieler Geld zu klauen (60s Cooldown)')
+    .addUserOption(opt => opt.setName('user').setDescription('Der Spieler, den du beklauen willst').setRequired(true)),
+  async execute(interaction) {
+    const target = interaction.options.getUser('user');
+    if (!target) return await interaction.reply('❌ Du musst jemanden erwähnen! `/steal @user`');
+    if (target.id === interaction.user.id) return await interaction.reply('❌ Du kannst dich nicht selbst beklauen!');
+    if (target.bot) return await interaction.reply('❌ Du kannst keinen Bot beklauen!');
 
-    const userId = message.author.id;
+    const userId = interaction.user.id;
     const user = db.getUser(userId);
     const config = require('../config.json');
 
@@ -22,14 +23,14 @@ module.exports = {
       const diff = Date.now() - lastSteal.getTime();
       if (diff < COOLDOWN) {
         const remaining = Math.ceil((COOLDOWN - diff) / 1000);
-        return message.reply(`⏳ Du musst noch **${remaining}s** warten, bevor du wieder klauen kannst!`);
+        return await interaction.reply(`⏳ Du musst noch **${remaining}s** warten, bevor du wieder klauen kannst!`);
       }
     }
 
     const targetUser = db.getUser(target.id);
 
     if (targetUser.balance < 10) {
-      return message.reply(`❌ **${target.username}** hat nicht genug Bargeld zum Klauen!`);
+      return await interaction.reply(`❌ **${target.username}** hat nicht genug Bargeld zum Klauen!`);
     }
 
     if (db.hasItem(target.id, 'Schutzschild')) {
@@ -40,7 +41,7 @@ module.exports = {
         .setTitle('🛡️ Geschützt!')
         .setDescription(`**${target.username}** hatte ein Schutzschild! Dein Diebstahl wurde abgewehrt und das Schild verbraucht.`)
         .setTimestamp();
-      return message.reply({ embeds: [embed] });
+      return await interaction.reply({ embeds: [embed] });
     }
 
     const successChance = 0.4;
@@ -72,7 +73,7 @@ module.exports = {
         .setFooter({ text: `Dein Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     } else {
       const fine = Math.floor(Math.random() * 100) + 50;
       const actualFine = Math.min(fine, user.balance);
@@ -85,7 +86,7 @@ module.exports = {
         .setFooter({ text: `Dein Guthaben: ${config.currencySymbol}${db.getBalance(userId).toLocaleString()}` })
         .setTimestamp();
 
-      message.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     }
   },
 };
