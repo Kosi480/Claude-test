@@ -62,6 +62,11 @@ const defaultItems = [
   { name: 'Tresor', price: 2000, description: 'Erhöht Bank-Kapazität um 5000', emoji: '🔒' },
   { name: 'Diamant-Ring', price: 5000, description: 'Seltener Luxusartikel', emoji: '💎' },
   { name: 'Goldbarren', price: 10000, description: 'Wertanlage', emoji: '🪙' },
+  { name: 'Heiltrank', price: 150, description: 'Heilt 30-50 HP im Kampf', emoji: '🧪' },
+  { name: 'Mana-Kristall', price: 300, description: 'Mystischer Kristall', emoji: '🔮' },
+  { name: 'Magischer Stein', price: 800, description: 'Verstärkt magische Kräfte', emoji: '💠' },
+  { name: 'Schattendolch', price: 2500, description: '+5 ATK im Kampf', emoji: '🗡️' },
+  { name: 'Drachenschuppe', price: 5000, description: '+3 ATK & DEF im Kampf', emoji: '🪬' },
 ];
 
 const insertItem = db.prepare(`INSERT OR IGNORE INTO shop_items (name, price, description, emoji) VALUES (?, ?, ?, ?)`);
