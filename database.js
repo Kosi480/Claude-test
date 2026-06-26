@@ -33,6 +33,7 @@ db.exec(`
 `);
 
 try { db.exec('ALTER TABLE users ADD COLUMN last_weekly TEXT'); } catch (_) {}
+try { db.exec('ALTER TABLE users ADD COLUMN prestige INTEGER DEFAULT 0'); } catch (_) {}
 
 const defaultItems = [
   { name: 'Angel', price: 100, description: 'Eine Angel zum Fischen', emoji: '🎣' },

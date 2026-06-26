@@ -44,6 +44,11 @@ module.exports = {
       earned = Math.floor(earned * 1.05);
     }
 
+    const prestige = user.prestige || 0;
+    if (prestige > 0) {
+      earned = Math.floor(earned * (1 + prestige * 0.05));
+    }
+
     db.updateBalance(userId, earned);
     db.setLastWork(userId);
 
