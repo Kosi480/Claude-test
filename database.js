@@ -35,6 +35,24 @@ db.exec(`
 try { db.exec('ALTER TABLE users ADD COLUMN last_weekly TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN prestige INTEGER DEFAULT 0'); } catch (_) {}
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    species TEXT NOT NULL,
+    emoji TEXT NOT NULL,
+    level INTEGER DEFAULT 1,
+    xp INTEGER DEFAULT 0,
+    hunger INTEGER DEFAULT 100,
+    happiness INTEGER DEFAULT 100,
+    bonus_type TEXT,
+    bonus_value REAL DEFAULT 0,
+    last_fed TEXT,
+    UNIQUE(user_id)
+  );
+`);
+
 const defaultItems = [
   { name: 'Angel', price: 100, description: 'Eine Angel zum Fischen', emoji: '🎣' },
   { name: 'Schaufel', price: 200, description: 'Zum Graben nach Schätzen', emoji: '⛏️' },
